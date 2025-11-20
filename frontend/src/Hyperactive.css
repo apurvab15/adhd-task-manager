@@ -1,0 +1,72 @@
+.hyperactive-container {
+  min-height: 100vh;
+  background-color: #bee9f8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.tasks-section {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: 70%;
+}
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.task {
+  background-color: #fff;
+  border-radius: 10px;
+  padding: 0.8rem 1.2rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.focus-section {
+  position: absolute;
+  right: 10%;
+  top: 30%;
+}
+
+.focus-card {
+  background-color: #cfe9ff;
+  border-radius: 14px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.focus-card button {
+  background-color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.progress-container {
+  margin-top: 3rem;
+  text-align: center;
+}
+
+.progress-bar {
+  width: 300px;
+  background-color: #dcdcdc;
+  height: 12px;
+  border-radius: 6px;
+  margin: 0 auto 0.5rem;
+  overflow: hidden;
+}
+
+.progress-fill {
+  background-color: #00c600;
+  height: 100%;
+}
