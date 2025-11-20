@@ -54,6 +54,22 @@ export const skyPalette: ColorPalette = {
     hoverBg: "hover:bg-white",
 };
 
+export const orangePalette: ColorPalette = {
+    bg: "from-white via-orange-50 to-white",
+    border: "border-orange-100",
+    borderLight: "border-orange-200",
+    shadow: "shadow-orange-100",
+    text: "text-orange-900",
+    textDark: "text-orange-950",
+    textMuted: "text-orange-500",
+    accent: "bg-orange-600",
+    accentHover: "hover:bg-orange-500",
+    accentLight: "bg-orange-50",
+    activeBg: "bg-orange-100",
+    activeText: "text-orange-900",
+    hoverBg: "hover:bg-white",
+};
+
 type TaskListDrawerProps = {
     taskLists: TaskList[];
     currentListId: number;
