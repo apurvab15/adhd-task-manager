@@ -1,5 +1,6 @@
 "use client";
 
+import FocusTimer from "@/components/FocusTimer";
 import TaskListWindow from "@/components/TaskList";
 import { useState } from "react";
 
@@ -21,8 +22,8 @@ export default function MixPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-100 via-white to-fuchsia-100">
-      <main className="mx-auto flex min-h-screen full-w flex-col gap-10 px-3 py-12">
-        <section className="flex items-center justify-between gap-4">
+      <main className="mx-auto flex min-h-screen w-full flex-col gap-10 px-3 py-12">
+        <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-4xl font-semibold text-zinc-900">
             Plan your day your way!
           </h1>
@@ -53,20 +54,20 @@ export default function MixPage() {
           </div>
         </section>
 
-        {/* Mode-specific content area */}
-        {mode === "hyperactive" ? (
-          // Hyperactive mode content
-          <div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2">
             <TaskListWindow mode={mode} />
-            {/* TODO: Add hyperactive-specific components or features here */}
           </div>
-        ) : (
-          // Inattentive mode content
-          <div>
-            <TaskListWindow mode={mode} />
-            {/* TODO: Add inattentive-specific components or features here */}
-          </div>
-        )}
+          <aside className="flex flex-col gap-6 rounded-3xl border border-dashed border-violet-200 bg-white/80 p-6 shadow-lg shadow-violet-100">
+            <FocusTimer label="Mix Flow Timer" />
+            <div className="rounded-2xl border border-violet-100 bg-white/90 p-4 text-sm text-violet-700">
+              <p className="font-semibold text-violet-900">Brain Mode Notes</p>
+              <p className="mt-2">
+                Use this column for rituals, reflections, or quick grounding prompts while the timer runs.
+              </p>
+            </div>
+          </aside>
+        </div>
 
         {/* <TaskBoard
           label="Mix Task Board"
