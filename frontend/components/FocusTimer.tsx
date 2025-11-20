@@ -1,17 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ColorPalette, violetPalette } from "./TaskListDrawer";
 
 type FocusTimerProps = {
   /** initial timer length in minutes */
   defaultMinutes?: number;
   /** optional label rendered above the timer */
   label?: string;
+  /** color palette for styling */
+  colorPalette?: ColorPalette;
 };
 
 export default function FocusTimer({
   defaultMinutes = 25,
   label = "Focus Timer",
+  colorPalette = violetPalette,
 }: FocusTimerProps) {
   const [minutesInput, setMinutesInput] = useState(defaultMinutes.toString());
   const [secondsRemaining, setSecondsRemaining] = useState(defaultMinutes * 60);
@@ -80,21 +84,21 @@ export default function FocusTimer({
   };
 
   return (
-    <div className="flex flex-col rounded-3xl border border-violet-100 bg-gradient-to-b from-white via-violet-50 to-white p-6 shadow-lg shadow-violet-100">
-      <p className="text-xs font-semibold uppercase tracking-[0.4em] text-violet-500">
+    <div className={`flex flex-col rounded-3xl border ${colorPalette.border} bg-gradient-to-b ${colorPalette.bg} p-6 shadow-lg ${colorPalette.shadow}`}>
+      <p className={`text-xs font-semibold uppercase tracking-[0.4em] ${colorPalette.textMuted}`}>
         {label}
       </p>
       <div className="mt-6 text-center">
-        <p className="text-5xl font-semibold text-violet-900">{formattedTime}</p>
+        <p className={`text-5xl font-semibold ${colorPalette.text}`}>{formattedTime}</p>
         <div className="mt-4 flex items-center justify-center gap-2">
           <input
             type="number"
             min={1}
-            className="w-20 rounded-2xl border border-violet-200 bg-white px-3 py-2 text-sm text-violet-900 focus:border-violet-400 focus:outline-none"
+            className={`w-20 rounded-2xl border ${colorPalette.borderLight} bg-white px-3 py-2 text-sm ${colorPalette.text} ${colorPalette.borderLight.replace('border-', 'focus:border-')} focus:outline-none`}
             value={minutesInput}
             onChange={(event) => handleMinutesChange(event.target.value)}
           />
-          <span className="text-xs font-semibold uppercase tracking-wide text-violet-700">
+          <span className={`text-xs font-semibold uppercase tracking-wide ${colorPalette.text}`}>
             minutes
           </span>
         </div>
@@ -104,7 +108,7 @@ export default function FocusTimer({
         <button
           type="button"
           onClick={handleStart}
-          className="rounded-2xl bg-violet-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:opacity-50"
+          className={`rounded-2xl ${colorPalette.accent} px-3 py-2 text-sm font-semibold text-white transition ${colorPalette.accentHover} disabled:opacity-50`}
           disabled={isRunning || secondsRemaining === 0}
         >
           Start
@@ -112,7 +116,7 @@ export default function FocusTimer({
         <button
           type="button"
           onClick={handlePause}
-          className="rounded-2xl border border-violet-200 px-3 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-50"
+          className={`rounded-2xl border ${colorPalette.borderLight} px-3 py-2 text-sm font-semibold ${colorPalette.text} transition ${colorPalette.accentLight.replace('bg-', 'hover:bg-')}`}
           disabled={!isRunning}
         >
           Pause
@@ -120,7 +124,7 @@ export default function FocusTimer({
         <button
           type="button"
           onClick={handleReset}
-          className="rounded-2xl border border-violet-200 px-3 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-50"
+          className={`rounded-2xl border ${colorPalette.borderLight} px-3 py-2 text-sm font-semibold ${colorPalette.text} transition ${colorPalette.accentLight.replace('bg-', 'hover:bg-')}`}
         >
           Reset
         </button>

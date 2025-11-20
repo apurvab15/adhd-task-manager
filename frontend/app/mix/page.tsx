@@ -2,6 +2,7 @@
 
 import FocusTimer from "@/components/FocusTimer";
 import TaskListWindow from "@/components/TaskList";
+import { violetPalette, skyPalette } from "@/components/TaskListDrawer";
 import { useState } from "react";
 
 type Mode = "inattentive" | "hyperactive";
@@ -56,12 +57,18 @@ export default function MixPage() {
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <TaskListWindow mode={mode} />
+            <TaskListWindow 
+              mode={mode} 
+              colorPalette={mode === "inattentive" ? skyPalette : violetPalette}
+            />
           </div>
-          <aside className="flex flex-col gap-6 rounded-3xl border border-dashed border-violet-200 bg-white/80 p-6 shadow-lg shadow-violet-100">
-            <FocusTimer label="Mix Flow Timer" />
-            <div className="rounded-2xl border border-violet-100 bg-white/90 p-4 text-sm text-violet-700">
-              <p className="font-semibold text-violet-900">Brain Mode Notes</p>
+          <aside className={`flex flex-col gap-6 rounded-3xl border border-dashed ${mode === "inattentive" ? "border-sky-200 shadow-sky-100" : "border-violet-200 shadow-violet-100"} bg-white/80 p-6 shadow-lg`}>
+            <FocusTimer 
+              label="Mix Flow Timer" 
+              colorPalette={mode === "inattentive" ? skyPalette : violetPalette}
+            />
+            <div className={`rounded-2xl border ${mode === "inattentive" ? "border-sky-100" : "border-violet-100"} bg-white/90 p-4 text-sm ${mode === "inattentive" ? "text-sky-700" : "text-violet-700"}`}>
+              <p className={`font-semibold ${mode === "inattentive" ? "text-sky-900" : "text-violet-900"}`}>Brain Mode Notes</p>
               <p className="mt-2">
                 Use this column for rituals, reflections, or quick grounding prompts while the timer runs.
               </p>

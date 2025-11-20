@@ -6,6 +6,54 @@ type TaskList = {
     tasks: { id: number; text: string; done: boolean }[];
 };
 
+export type ColorPalette = {
+    bg: string;
+    border: string;
+    borderLight: string;
+    shadow: string;
+    text: string;
+    textDark: string;
+    textMuted: string;
+    accent: string;
+    accentHover: string;
+    accentLight: string;
+    activeBg: string;
+    activeText: string;
+    hoverBg: string;
+};
+
+export const violetPalette: ColorPalette = {
+    bg: "from-white via-violet-50 to-white",
+    border: "border-violet-100",
+    borderLight: "border-violet-200",
+    shadow: "shadow-violet-100",
+    text: "text-violet-900",
+    textDark: "text-violet-950",
+    textMuted: "text-violet-500",
+    accent: "bg-violet-600",
+    accentHover: "hover:bg-violet-500",
+    accentLight: "bg-violet-50",
+    activeBg: "bg-violet-100",
+    activeText: "text-violet-900",
+    hoverBg: "hover:bg-white",
+};
+
+export const skyPalette: ColorPalette = {
+    bg: "from-white via-sky-50 to-white",
+    border: "border-sky-100",
+    borderLight: "border-sky-200",
+    shadow: "shadow-sky-100",
+    text: "text-sky-900",
+    textDark: "text-sky-950",
+    textMuted: "text-sky-500",
+    accent: "bg-sky-600",
+    accentHover: "hover:bg-sky-500",
+    accentLight: "bg-sky-50",
+    activeBg: "bg-sky-100",
+    activeText: "text-sky-900",
+    hoverBg: "hover:bg-white",
+};
+
 type TaskListDrawerProps = {
     taskLists: TaskList[];
     currentListId: number;
@@ -14,6 +62,7 @@ type TaskListDrawerProps = {
     onDeleteList?: (listId: number) => void;
     isOpen: boolean;
     onToggle: () => void;
+    colorPalette?: ColorPalette;
 };
 
 export default function TaskListDrawer({
@@ -24,24 +73,25 @@ export default function TaskListDrawer({
     onDeleteList,
     isOpen,
     onToggle,
+    colorPalette = violetPalette,
 }: TaskListDrawerProps) {
     return (
         <div 
-            className={`h-full min-h-[75vh] rounded-3xl border border-violet-100 bg-gradient-to-b from-white via-violet-50 to-white shadow-lg shadow-violet-100 transition-all duration-300 ease-in-out ${
+            className={`h-full min-h-[75vh] rounded-3xl border ${colorPalette.border} bg-gradient-to-b ${colorPalette.bg} shadow-lg ${colorPalette.shadow} transition-all duration-300 ease-in-out ${
                 isOpen ? "w-72" : "w-16"
             }`}
         >
             <div className="flex flex-col h-full">
                 {/* Header with toggle button */}
-                <div className="flex items-center justify-between p-4 border-b border-violet-100">
+                <div className={`flex items-center justify-between p-4 border-b ${colorPalette.border}`}>
                     {isOpen ? (
                         <>
-                            <h2 className="text-lg font-semibold text-violet-900">
+                            <h2 className={`text-lg font-semibold ${colorPalette.text}`}>
                                 Task Lists
                             </h2>
                             <button
                                 onClick={onToggle}
-                                className="p-1 rounded-lg text-violet-500 transition-colors hover:bg-violet-50"
+                                className={`p-1 rounded-lg ${colorPalette.textMuted} transition-colors ${colorPalette.accentLight.replace('bg-', 'hover:bg-')}`}
                                 title="Close drawer"
                             >
                                 <svg
@@ -57,7 +107,7 @@ export default function TaskListDrawer({
                     ) : (
                         <button
                             onClick={onToggle}
-                            className="w-full rounded-lg p-2 text-violet-600 transition-colors hover:bg-violet-50 flex items-center justify-center"
+                            className={`w-full rounded-lg p-2 ${colorPalette.text} transition-colors ${colorPalette.accentLight.replace('bg-', 'hover:bg-')} flex items-center justify-center`}
                             title="Open task lists"
                         >
                             <svg
@@ -81,7 +131,7 @@ export default function TaskListDrawer({
                     <>
                         <div className="flex-1 overflow-y-auto p-3">
                             {taskLists.length === 0 ? (
-                                <p className="text-sm text-violet-500 p-4 text-center">
+                                <p className={`text-sm ${colorPalette.textMuted} p-4 text-center`}>
                                     No task lists yet
                                 </p>
                             ) : (
@@ -93,25 +143,25 @@ export default function TaskListDrawer({
 
                                         return (
                                             <li key={list.id}>
-                                                <button
+                                                <div
                                                     onClick={() => onSelectList(list.id)}
-                                                    className={`w-full flex items-center justify-between rounded-2xl border border-violet-100 p-3 text-left transition-colors group ${
+                                                    className={`w-full flex items-center justify-between rounded-2xl border ${colorPalette.border} p-3 text-left transition-colors group cursor-pointer ${
                                                         isActive
-                                                            ? "bg-violet-100 text-violet-900"
-                                                            : "text-violet-900 hover:bg-white"
+                                                            ? `${colorPalette.activeBg} ${colorPalette.activeText}`
+                                                            : `${colorPalette.text} ${colorPalette.hoverBg}`
                                                     }`}
                                                 >
                                                     <div className="flex-1 min-w-0">
                                                         <p
                                                             className={`font-medium truncate ${
                                                                 isActive
-                                                                    ? "text-violet-900"
-                                                                    : "text-violet-900"
+                                                                    ? colorPalette.activeText
+                                                                    : colorPalette.text
                                                             }`}
                                                         >
                                                             {list.name}
                                                         </p>
-                                                        <p className="text-xs text-violet-500 mt-0.5">
+                                                        <p className={`text-xs ${colorPalette.textMuted} mt-0.5`}>
                                                             {completedCount}/{taskCount} tasks
                                                         </p>
                                                     </div>
@@ -121,7 +171,7 @@ export default function TaskListDrawer({
                                                                 e.stopPropagation();
                                                                 onDeleteList(list.id);
                                                             }}
-                                                            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-violet-200 transition-opacity"
+                                                            className={`opacity-0 group-hover:opacity-100 p-1 rounded ${colorPalette.borderLight.replace('border-', 'hover:bg-')} transition-opacity`}
                                                             title="Delete list"
                                                         >
                                                             <svg
@@ -138,7 +188,7 @@ export default function TaskListDrawer({
                                                             </svg>
                                                         </button>
                                                     )}
-                                                </button>
+                                                </div>
                                             </li>
                                         );
                                     })}
@@ -147,10 +197,10 @@ export default function TaskListDrawer({
                         </div>
 
                         {/* Footer with create button */}
-                        <div className="p-4 border-t border-violet-100">
+                        <div className={`p-4 border-t ${colorPalette.border}`}>
                             <button
                                 onClick={onCreateList}
-                                className="w-full flex items-center justify-center gap-2 rounded-2xl bg-violet-600 px-4 py-2 font-medium text-white transition-colors hover:bg-violet-500"
+                                className={`w-full flex items-center justify-center gap-2 rounded-2xl ${colorPalette.accent} px-4 py-2 font-medium text-white transition-colors ${colorPalette.accentHover}`}
                             >
                                 <svg
                                     xmlns="http://www.w3.org/2000/svg"

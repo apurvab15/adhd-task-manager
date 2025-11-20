@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import TaskListDrawer from "./TaskListDrawer";
+import TaskListDrawer, { type ColorPalette, violetPalette } from "./TaskListDrawer";
 
 type Task = {
     id: number;
@@ -21,9 +21,10 @@ type Mode = "inattentive" | "hyperactive";
 
 type TaskListWindowProps = {
     mode?: Mode;
+    colorPalette?: ColorPalette;
 };
 
-export default function TaskListWindow({ mode = "hyperactive" }: TaskListWindowProps) {
+export default function TaskListWindow({ mode = "hyperactive", colorPalette = violetPalette }: TaskListWindowProps) {
     const [taskLists, setTaskLists] = useState<TaskList[]>(() => {
         if (typeof window === "undefined") {
             return [{ id: 1, name: "Task List", tasks: [] }];
@@ -239,8 +240,9 @@ export default function TaskListWindow({ mode = "hyperactive" }: TaskListWindowP
                 onDeleteList={deleteList}
                 isOpen={isDrawerOpen}
                 onToggle={() => setIsDrawerOpen(!isDrawerOpen)}
+                colorPalette={colorPalette}
             />
-            <div className="flex-1 rounded-3xl border border-violet-100 bg-gradient-to-b from-white via-violet-50 to-white p-6 shadow-lg shadow-violet-100 flex flex-col">
+            <div className={`flex-1 rounded-3xl border ${colorPalette.border} bg-gradient-to-b ${colorPalette.bg} p-6 shadow-lg ${colorPalette.shadow} flex flex-col`}>
             {/* Editable title with pencil icon */}
             <div className="flex items-center mb-2">
                 {isEditingTitle ? (
@@ -259,15 +261,15 @@ export default function TaskListWindow({ mode = "hyperactive" }: TaskListWindowP
                                     cancelEditingTitle();
                                 }
                             }}
-                            className="flex-1 text-lg font-semibold text-violet-950 bg-transparent border-b-2 border-violet-500 focus:outline-none px-1"
+                            className={`flex-1 text-lg font-semibold ${colorPalette.textDark} bg-transparent border-b-2 ${colorPalette.accent.replace('bg-', 'border-')} focus:outline-none px-1`}
                         />
                     </div>
                 ) : (
-                    <div className="flex items-center gap-1.5 text-violet-950">
-                        <h3 className="text-lg font-semibold text-violet-950">{currentList.name}</h3>
+                    <div className={`flex items-center gap-1.5 ${colorPalette.textDark}`}>
+                        <h3 className={`text-lg font-semibold ${colorPalette.textDark}`}>{currentList.name}</h3>
                         <button
                             onClick={startEditingTitle}
-                            className="p-0.5 rounded text-violet-900 hover:bg-violet-100 transition-colors"
+                            className={`p-0.5 rounded ${colorPalette.text} ${colorPalette.accentLight.replace('bg-', 'hover:bg-')} transition-colors`}
                             title="Edit title"
                         >
                             <svg
@@ -284,12 +286,12 @@ export default function TaskListWindow({ mode = "hyperactive" }: TaskListWindowP
             </div>
 
             {/* Scrollable task list */}
-            <div className="flex-1 min-h-[200px] max-h-[500px] overflow-auto rounded-2xl border border-violet-100 bg-white/70 p-3 mb-4">
+            <div className={`flex-1 min-h-[200px] max-h-[500px] overflow-auto rounded-2xl border ${colorPalette.border} bg-white/70 p-3 mb-4`}>
                 <ul>
                     {currentList.tasks.map((task) => (
                         <li
                             key={task.id}
-                            className="flex items-center justify-between rounded-2xl border border-violet-100 bg-white/90 px-4 py-3 transition hover:border-violet-200"
+                            className={`flex items-center justify-between rounded-2xl border ${colorPalette.border} bg-white/90 px-4 py-3 transition ${colorPalette.borderLight.replace('border-', 'hover:border-')}`}
                         >
                             <div className="flex items-center gap-3">
                                 {/* custom radio-like button */}
@@ -297,8 +299,8 @@ export default function TaskListWindow({ mode = "hyperactive" }: TaskListWindowP
                                     onClick={() => toggleDone(task.id)}
                                     aria-pressed={task.done}
                                     className={`w-4 h-4 rounded-full flex items-center justify-center border-2 transition-all focus:outline-none ${task.done
-                                        ? "border-violet-500 bg-violet-500"
-                                        : "border-violet-200 bg-transparent"
+                                        ? `${colorPalette.accent.replace('bg-', 'border-')} ${colorPalette.accent}`
+                                        : `${colorPalette.borderLight} bg-transparent`
                                         }`}
                                     title={task.done ? "Mark as not done" : "Mark as done"}
                                 >
@@ -308,7 +310,7 @@ export default function TaskListWindow({ mode = "hyperactive" }: TaskListWindowP
 
                                 {/* task text */}
                                 <span
-                                    className={`select-none ${task.done ? "line-through text-violet-400" : "text-violet-900"}`}
+                                    className={`select-none ${task.done ? `line-through ${colorPalette.textMuted}` : colorPalette.text}`}
                                     onClick={() => toggleDone(task.id)}
                                 >
                                     {task.text}
@@ -318,7 +320,7 @@ export default function TaskListWindow({ mode = "hyperactive" }: TaskListWindowP
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={() => removeTask(task.id)}
-                                    className="text-xs px-2 py-1 rounded-xl text-violet-600 hover:bg-violet-50"
+                                    className={`text-xs px-2 py-1 rounded-xl ${colorPalette.text} ${colorPalette.accentLight.replace('bg-', 'hover:bg-')}`}
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-5">
                                         <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
@@ -331,13 +333,13 @@ export default function TaskListWindow({ mode = "hyperactive" }: TaskListWindowP
                     ))}
 
                     {currentList.tasks.length === 0 && (
-                        <li className="text-sm text-violet-500">No tasks yet — add one!</li>
+                        <li className={`text-sm ${colorPalette.textMuted}`}>No tasks yet — add one!</li>
                     )}
                 </ul>
             </div>
 
             {/* input area with Add and Break Task on the right */}
-            <div className="flex items-start gap-3 rounded-2xl border border-violet-100 bg-white/80 p-3">
+            <div className={`flex items-start gap-3 rounded-2xl border ${colorPalette.border} bg-white/80 p-3`}>
                 <textarea
                     ref={inputRef}
                     value={input}
@@ -345,13 +347,13 @@ export default function TaskListWindow({ mode = "hyperactive" }: TaskListWindowP
                     //onKeyDown={handleKeyDown}
                     rows={2}
                     placeholder="Type a task... (Enter = add, Shift+Enter = break)"
-                    className="flex-1 resize-none rounded-2xl border border-violet-100 bg-white/80 p-3 text-sm text-violet-900 focus:border-violet-400 focus:outline-none"
+                    className={`flex-1 resize-none rounded-2xl border ${colorPalette.border} bg-white/80 p-3 text-sm ${colorPalette.text} ${colorPalette.borderLight.replace('border-', 'focus:border-')} focus:outline-none`}
                 />
 
                 <div className="flex flex-col gap-3 px-1">
                     <button
                         onClick={() => addTask(input)}
-                        className="rounded-2xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-500 focus:outline-none"
+                        className={`rounded-2xl ${colorPalette.accent} px-4 py-2 text-sm font-semibold text-white shadow-sm transition ${colorPalette.accentHover} focus:outline-none`}
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-5">
                             <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
@@ -361,7 +363,7 @@ export default function TaskListWindow({ mode = "hyperactive" }: TaskListWindowP
 
                     <button
                         onClick={breakTaskAtCaret}
-                        className="rounded-2xl border border-violet-200 px-4 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-50"
+                        className={`rounded-2xl border ${colorPalette.borderLight} px-4 py-2 text-sm font-semibold ${colorPalette.text} transition ${colorPalette.accentLight.replace('bg-', 'hover:bg-')}`}
                         title="Split the current input at the cursor into two tasks"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-5">
