@@ -34,10 +34,8 @@ export default function InattentivePage() {
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement | null>(null);
   const nextTaskId = useRef(1);
-  const nextListId = useRef(1);
   const confettiRef = useRef<JSConfetti | null>(null);
   const hasTriggeredConfettiRef = useRef(false);
-  const TODAYS_LIST_NAME = "Today's Tasks";
 
   // Use periwinkle palette for inattentive type
   const colorPalette: ColorPalette = periwinklePalette;
@@ -49,44 +47,6 @@ export default function InattentivePage() {
     }
   }, []);
 
-  // Helper function to get or create "Today's Tasks" list
-  const getOrCreateTodaysList = (lists: TaskList[]): TaskList => {
-    let todaysList = lists.find((list) => list.name === TODAYS_LIST_NAME);
-    if (!todaysList) {
-      todaysList = {
-        id: nextListId.current++,
-        name: TODAYS_LIST_NAME,
-        tasks: [],
-      };
-      lists.push(todaysList);
-    }
-    return todaysList;
-  };
-
-  // Sync today's tasks to the task list
-  const syncTasksToTaskList = (tasks: Task[]) => {
-    if (typeof window === "undefined" || !isHydrated) return;
-
-    try {
-      const savedLists = window.localStorage.getItem(STORAGE_KEY);
-      const taskLists: TaskList[] = savedLists ? JSON.parse(savedLists) : [];
-      
-      const todaysList = getOrCreateTodaysList(taskLists);
-      
-      // Convert today's tasks to task list format and sync
-      todaysList.tasks = tasks.map((task) => ({
-        id: task.id,
-        text: task.text,
-        done: task.done,
-      }));
-
-      // Update task lists in localStorage
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(taskLists));
-      setTaskLists(taskLists);
-    } catch (error) {
-      console.error("Error syncing tasks to task list:", error);
-    }
-  };
 
   // Load today's tasks and task lists from localStorage
   useEffect(() => {
@@ -117,16 +77,14 @@ export default function InattentivePage() {
         }
       }
 
-      // Load task lists
+      // Load task lists (for AddTasksModal, but don't sync today's tasks to them)
       const savedLists = window.localStorage.getItem(STORAGE_KEY);
       if (savedLists) {
         const parsed = JSON.parse(savedLists);
         setTaskLists(parsed || []);
         
-        // Initialize nextListId and nextTaskId from existing lists
+        // Initialize nextTaskId from existing lists to avoid ID conflicts
         if (parsed && parsed.length > 0) {
-          const maxListId = Math.max(...parsed.map((list: TaskList) => list.id));
-          nextListId.current = maxListId + 1;
           const allTasks = parsed.flatMap((list: TaskList) => list.tasks);
           if (allTasks.length > 0) {
             const maxTaskId = Math.max(...allTasks.map((t: { id: number }) => t.id));
@@ -166,7 +124,7 @@ export default function InattentivePage() {
     };
   }, []);
 
-  // Save today's tasks to localStorage and sync to task list
+  // Save today's tasks to localStorage (separate storage, not synced to task lists)
   useEffect(() => {
     if (!isHydrated || typeof window === "undefined") return;
 
@@ -175,44 +133,21 @@ export default function InattentivePage() {
       TODAY_TASKS_KEY,
       JSON.stringify({ date: today, tasks: todayTasks })
     );
-    
-    // Sync tasks to task list
-    try {
-      const savedLists = window.localStorage.getItem(STORAGE_KEY);
-      const taskLists: TaskList[] = savedLists ? JSON.parse(savedLists) : [];
-      
-      const todaysList = getOrCreateTodaysList(taskLists);
-      
-      // Convert today's tasks to task list format and sync
-      todaysList.tasks = todayTasks.map((task) => ({
-        id: task.id,
-        text: task.text,
-        done: task.done,
-      }));
-
-      // Update task lists in localStorage
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(taskLists));
-      setTaskLists(taskLists);
-    } catch (error) {
-      console.error("Error syncing tasks to task list:", error);
-    }
   }, [todayTasks, isHydrated]);
 
   const handleTaskToggle = (taskId: number) => {
     setTodayTasks((tasks) => {
-      const updated = tasks.map((task) => {
-        if (task.id === taskId) {
-          const newDone = !task.done;
-          // Award XP when marking as done (not when unchecking)
-          if (newDone && !task.done && typeof window !== "undefined") {
-            awardXPForTask();
-            window.dispatchEvent(new CustomEvent("taskCompleted"));
-          }
-          return { ...task, done: newDone };
-        }
-        return task;
-      });
-      return updated;
+      const task = tasks.find((t) => t.id === taskId);
+      if (!task) return tasks;
+      
+      const newDone = !task.done;
+      // Award XP only when marking as done (not when unchecking) and only once
+      if (newDone && !task.done && typeof window !== "undefined") {
+        awardXPForTask();
+        window.dispatchEvent(new CustomEvent("taskCompleted"));
+      }
+      
+      return tasks.map((t) => (t.id === taskId ? { ...t, done: newDone } : t));
     });
   };
 
@@ -221,8 +156,13 @@ export default function InattentivePage() {
   };
 
   const handleAddTasks = (tasks: Array<{ id: number; text: string; done: boolean; sourceListId?: number; sourceListName?: string }>) => {
-    // Add new tasks to the beginning so they appear in "Next Step" first
-    setTodayTasks((prev) => [...tasks, ...prev]);
+    // Filter out tasks that already exist to prevent duplicates
+    setTodayTasks((prev) => {
+      const existingIds = new Set(prev.map(t => t.id));
+      const newTasks = tasks.filter(t => !existingIds.has(t.id));
+      // Add new tasks to the beginning so they appear in "Next Step" first
+      return [...newTasks, ...prev];
+    });
   };
 
   const addTask = (text: string) => {
@@ -280,7 +220,7 @@ export default function InattentivePage() {
           </Link>
           <div className="flex items-center gap-6">
             <Link
-              href="/tasks"
+              href="/tasks?mode=inattentive"
               className="text-lg font-medium text-gray-900 transition-colors hover:text-gray-700"
             >
               Tasks
@@ -314,9 +254,6 @@ export default function InattentivePage() {
                   {nextTask.text}
                 </p>
               </div>
-              {nextTask.sourceListName && (
-                <p className="text-xl text-gray-700 ml-14">from {nextTask.sourceListName}</p>
-              )}
               
               {/* Action buttons */}
               <div className="flex flex-col gap-4 mt-8">
@@ -402,9 +339,6 @@ export default function InattentivePage() {
                       >
                         {task.text}
                       </p>
-                      {task.sourceListName && (
-                        <p className="mt-2 text-xl text-gray-700">from {task.sourceListName}</p>
-                      )}
                     </div>
                     <button
                       onClick={() => handleRemoveTask(task.id)}

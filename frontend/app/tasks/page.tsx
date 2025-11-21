@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import TaskListWindow from "@/components/TaskList";
 import FocusModeModal from "@/components/FocusModeModal";
-import { violetPalette, skyPalette, type ColorPalette } from "@/components/TaskListDrawer";
+import { violetPalette, periwinklePalette, type ColorPalette } from "@/components/TaskListDrawer";
 
 type Mode = "inattentive" | "hyperactive";
 
@@ -13,7 +13,7 @@ export default function TasksPage() {
   const searchParams = useSearchParams();
   const modeParam = searchParams.get("mode");
   const mode: Mode = (modeParam === "inattentive" || modeParam === "hyperactive") ? modeParam : "hyperactive";
-  const colorPalette: ColorPalette = mode === "inattentive" ? skyPalette : violetPalette;
+  const colorPalette: ColorPalette = mode === "inattentive" ? periwinklePalette : violetPalette;
   
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -22,13 +22,20 @@ export default function TasksPage() {
     return `${path}?mode=${mode}`;
   };
 
+  // Get home URL based on mode
+  const getHomeUrl = () => {
+    if (mode === "inattentive") return "/inattentive";
+    if (mode === "hyperactive") return "/hyperactive";
+    return createLink("/home");
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
       {/* Navigation Bar */}
       <nav className="border-b border-black/5 bg-white/80 backdrop-blur-sm">
         <div className="flex items-center justify-between px-4 py-3">
           <Link
-            href={createLink("/home")}
+            href={getHomeUrl()}
             className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100"
           >
             <svg
@@ -47,7 +54,7 @@ export default function TasksPage() {
           </Link>
           <div className="flex items-center gap-4">
             <Link
-              href={createLink("/home")}
+              href={getHomeUrl()}
               className="text-xl font-semibold text-zinc-900"
             >
               Task Manager

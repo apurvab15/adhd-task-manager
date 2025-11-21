@@ -13,6 +13,7 @@ type SimpleTaskListProps = {
   onTasksChange?: (tasks: Task[]) => void;
   showDelete?: boolean;
   colorPalette?: ColorPalette;
+  onTaskToggle?: (taskId: string | number, isChecked: boolean) => void;
 };
 
 export default function SimpleTaskList({
@@ -20,6 +21,7 @@ export default function SimpleTaskList({
   onTasksChange,
   showDelete = false,
   colorPalette,
+  onTaskToggle,
 }: SimpleTaskListProps) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [checkedTasks, setCheckedTasks] = useState<Set<string | number>>(new Set());
@@ -50,6 +52,9 @@ export default function SimpleTaskList({
         return newSet;
       });
     }
+    
+    // Notify parent of task toggle
+    onTaskToggle?.(taskId, isChecked);
   };
 
   const handleDelete = (taskId: string | number) => {

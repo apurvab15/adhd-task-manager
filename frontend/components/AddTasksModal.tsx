@@ -147,9 +147,9 @@ export default function AddTasksModal({ isOpen, onClose, onAddTasks, existingTas
                 No unticked tasks available to add.
               </p>
             ) : (
-              allTasks.map(({ task, listName }) => (
+              allTasks.map(({ task, listName, listId }) => (
                 <label
-                  key={task.id}
+                  key={`${listId}-${task.id}`}
                   className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#7085FF]/20 bg-white p-3 transition-colors hover:bg-[#7085FF]/5"
                 >
                   <input

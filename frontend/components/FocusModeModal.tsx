@@ -101,7 +101,7 @@ export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
-      <div className={`w-full max-w-2xl max-h-[90vh] rounded-3xl border ${colorPalette.border} bg-gradient-to-b ${colorPalette.bg} shadow-2xl ${colorPalette.shadow} flex flex-col my-auto`}>
+      <div className={`w-full max-w-2xl max-h-[90vh] rounded-3xl border ${colorPalette.border} ${mode === "inattentive" ? "bg-white" : `bg-gradient-to-b ${colorPalette.bg}`} shadow-2xl ${colorPalette.shadow} flex flex-col my-auto`}>
         {/* Header */}
         <div className="flex items-center justify-between p-6 pb-4 flex-shrink-0">
           <h2 className={`text-2xl font-semibold ${colorPalette.textDark}`}>Focus Mode Setup</h2>
@@ -124,7 +124,7 @@ export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }
         {/* Body - Scrollable */}
         <div className="px-6 pb-4 space-y-4 overflow-y-auto flex-1 min-h-0">
           {/* Timer Setting */}
-          <div className={`rounded-2xl border ${colorPalette.borderLight} bg-white/80 p-4`}>
+          <div className={`rounded-2xl border ${colorPalette.borderLight} ${mode === "inattentive" ? "bg-white" : "bg-white/80"} p-4`}>
             <label className={`mb-2 block text-sm font-semibold ${colorPalette.textDark}`}>
               Timer Duration (minutes)
             </label>
@@ -139,47 +139,91 @@ export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }
           </div>
 
           {/* Task Selection */}
-          <div className={`rounded-2xl border ${colorPalette.borderLight} bg-white/80 p-4`}>
-            <div className="mb-3 flex items-center justify-between">
-              <label className={`text-sm font-semibold ${colorPalette.textDark}`}>
-                Select Tasks ({selectedTaskIds.size} selected)
-              </label>
-              {allTasks.length > 0 && (
-                <button
-                  onClick={handleSelectAll}
-                  className={`text-xs font-medium ${colorPalette.text} ${colorPalette.textDark.replace('text-', 'hover:text-')}`}
-                >
-                  {selectedTaskIds.size === allTasks.length ? "Deselect All" : "Select All"}
-                </button>
-              )}
-            </div>
-
-            <div className="max-h-64 space-y-2 overflow-y-auto">
-              {allTasks.length === 0 ? (
-                <p className={`py-8 text-center text-sm ${colorPalette.textMuted}`}>
-                  No unticked tasks available. Complete some tasks first!
-                </p>
-              ) : (
-                allTasks.map(({ task, listName }) => (
-                  <label
-                    key={task.id}
-                    className={`flex cursor-pointer items-start gap-3 rounded-xl border ${colorPalette.borderLight} bg-white p-3 transition-colors ${colorPalette.hoverBg}`}
+          {mode === "inattentive" ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <label className={`text-sm font-semibold ${colorPalette.textDark}`}>
+                  Select Tasks ({selectedTaskIds.size} selected)
+                </label>
+                {allTasks.length > 0 && (
+                  <button
+                    onClick={handleSelectAll}
+                    className={`text-xs font-medium ${colorPalette.text} ${colorPalette.textDark.replace('text-', 'hover:text-')}`}
                   >
-                    <input
-                      type="checkbox"
-                      checked={selectedTaskIds.has(task.id)}
-                      onChange={() => handleTaskToggle(task.id)}
-                      className={`mt-1 h-4 w-4 cursor-pointer rounded ${colorPalette.border} ${colorPalette.text} ${mode === "inattentive" ? "focus:ring-[#7085FF]" : "focus:ring-violet-500"}`}
-                    />
-                    <div className="flex-1">
-                      <p className={`text-sm ${colorPalette.textDark}`}>{task.text}</p>
-                      <p className={`mt-1 text-xs ${colorPalette.textMuted}`}>from {listName}</p>
-                    </div>
-                  </label>
-                ))
-              )}
+                    {selectedTaskIds.size === allTasks.length ? "Deselect All" : "Select All"}
+                  </button>
+                )}
+              </div>
+
+              <div className="max-h-64 space-y-2 overflow-y-auto">
+                {allTasks.length === 0 ? (
+                  <p className={`py-8 text-center text-sm ${colorPalette.textMuted}`}>
+                    No unticked tasks available. Complete some tasks first!
+                  </p>
+                ) : (
+                  allTasks.map(({ task, listName }) => (
+                    <label
+                      key={task.id}
+                      className={`flex cursor-pointer items-start gap-3 rounded-xl border ${colorPalette.borderLight} bg-white p-3 transition-colors ${colorPalette.hoverBg}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedTaskIds.has(task.id)}
+                        onChange={() => handleTaskToggle(task.id)}
+                        className={`mt-1 h-4 w-4 cursor-pointer rounded border-2 border-[#7085FF]/60 bg-white text-[#7085FF] focus:ring-2 focus:ring-[#7085FF]/30 focus:border-[#7085FF] checked:bg-[#7085FF] checked:border-[#7085FF]`}
+                      />
+                      <div className="flex-1">
+                        <p className={`text-sm ${colorPalette.textDark}`}>{task.text}</p>
+                        <p className={`mt-1 text-xs ${colorPalette.textMuted}`}>from {listName}</p>
+                      </div>
+                    </label>
+                  ))
+                )}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className={`rounded-2xl border ${colorPalette.borderLight} bg-white/80 p-4`}>
+              <div className="mb-3 flex items-center justify-between">
+                <label className={`text-sm font-semibold ${colorPalette.textDark}`}>
+                  Select Tasks ({selectedTaskIds.size} selected)
+                </label>
+                {allTasks.length > 0 && (
+                  <button
+                    onClick={handleSelectAll}
+                    className={`text-xs font-medium ${colorPalette.text} ${colorPalette.textDark.replace('text-', 'hover:text-')}`}
+                  >
+                    {selectedTaskIds.size === allTasks.length ? "Deselect All" : "Select All"}
+                  </button>
+                )}
+              </div>
+
+              <div className="max-h-64 space-y-2 overflow-y-auto">
+                {allTasks.length === 0 ? (
+                  <p className={`py-8 text-center text-sm ${colorPalette.textMuted}`}>
+                    No unticked tasks available. Complete some tasks first!
+                  </p>
+                ) : (
+                  allTasks.map(({ task, listName }) => (
+                    <label
+                      key={task.id}
+                      className={`flex cursor-pointer items-start gap-3 rounded-xl border ${colorPalette.borderLight} bg-white p-3 transition-colors ${colorPalette.hoverBg}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedTaskIds.has(task.id)}
+                        onChange={() => handleTaskToggle(task.id)}
+                        className={`mt-1 h-4 w-4 cursor-pointer rounded ${colorPalette.border} ${colorPalette.text} focus:ring-violet-500`}
+                      />
+                      <div className="flex-1">
+                        <p className={`text-sm ${colorPalette.textDark}`}>{task.text}</p>
+                        <p className={`mt-1 text-xs ${colorPalette.textMuted}`}>from {listName}</p>
+                      </div>
+                    </label>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

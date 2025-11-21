@@ -138,10 +138,9 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
         setTaskLists((lists) => {
             const currentList = lists.find((list) => list.id === currentListId);
             const task = currentList?.tasks.find((t) => t.id === taskId);
-            const isMarkingAsDone = task && !task.done;
-
-            // Award XP when marking a task as done (not when unchecking)
-            if (isMarkingAsDone && typeof window !== "undefined") {
+            
+            // Award XP only when marking a task as done (not when unchecking) and only once
+            if (task && !task.done && typeof window !== "undefined") {
                 awardXPForTask();
                 // Trigger a custom event to refresh stats on home page
                 window.dispatchEvent(new CustomEvent("taskCompleted"));
@@ -150,11 +149,11 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
             return lists.map((list) =>
                 list.id === currentListId
                     ? {
-                        ...list,
-                        tasks: list.tasks.map((t) =>
-                            t.id === taskId ? { ...t, done: !t.done } : t
-                        ),
-                    }
+                          ...list,
+                          tasks: list.tasks.map((t) =>
+                              t.id === taskId ? { ...t, done: !t.done } : t
+                          ),
+                      }
                     : list
             );
         });

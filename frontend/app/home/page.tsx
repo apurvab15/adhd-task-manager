@@ -182,19 +182,17 @@ export default function HomePage() {
 
   const handleTaskToggle = (taskId: number) => {
     setTodayTasks((tasks) => {
-      const updated = tasks.map((task) => {
-        if (task.id === taskId) {
-          const newDone = !task.done;
-          // Award XP when marking as done (not when unchecking)
-          if (newDone && !task.done && typeof window !== "undefined") {
-            awardXPForTask();
-            window.dispatchEvent(new CustomEvent("taskCompleted"));
-          }
-          return { ...task, done: newDone };
-        }
-        return task;
-      });
-      return updated;
+      const task = tasks.find((t) => t.id === taskId);
+      if (!task) return tasks;
+      
+      const newDone = !task.done;
+      // Award XP only when marking as done (not when unchecking) and only once
+      if (newDone && !task.done && typeof window !== "undefined") {
+        awardXPForTask();
+        window.dispatchEvent(new CustomEvent("taskCompleted"));
+      }
+      
+      return tasks.map((t) => (t.id === taskId ? { ...t, done: newDone } : t));
     });
   };
 
