@@ -94,9 +94,9 @@ export default function FocusTimer({
   };
 
   return (
-    <div className={`flex flex-col rounded-3xl border ${colorPalette.border} bg-gradient-to-b ${colorPalette.bg} p-6 shadow-lg ${colorPalette.shadow}`}>
+    <div className={`flex flex-col rounded-3xl border-2 ${colorPalette.border} bg-white p-6`}>
       <div className="flex items-center justify-between">
-        <p className={`text-xs font-semibold uppercase tracking-[0.4em] ${colorPalette.textMuted}`}>
+        <p className="text-xs font-semibold uppercase tracking-[0.4em] text-gray-700">
           {label}
         </p>
         {!isEditMode && (
@@ -127,17 +127,17 @@ export default function FocusTimer({
         )}
       </div>
       <div className="mt-6 text-center">
-        <p className={`text-5xl font-semibold ${colorPalette.text}`}>{formattedTime}</p>
+        <p className="text-5xl font-semibold text-gray-900">{formattedTime}</p>
         {isEditMode && (
           <div className="mt-4 flex items-center justify-center gap-2">
             <input
               type="number"
               min={1}
-              className={`w-20 rounded-2xl border ${colorPalette.borderLight} bg-white px-3 py-2 text-sm ${colorPalette.text} ${colorPalette.borderLight.replace('border-', 'focus:border-')} focus:outline-none`}
+              className={`w-20 rounded-2xl border ${colorPalette.borderLight} bg-white px-3 py-2 text-sm text-gray-900 ${colorPalette.borderLight.replace('border-', 'focus:border-')} focus:outline-none`}
               value={minutesInput}
               onChange={(event) => handleMinutesChange(event.target.value)}
             />
-            <span className={`text-xs font-semibold uppercase tracking-wide ${colorPalette.text}`}>
+            <span className="text-xs font-semibold uppercase tracking-wide text-gray-900">
               minutes
             </span>
           </div>

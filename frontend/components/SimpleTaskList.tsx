@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { type ColorPalette } from "./TaskListDrawer";
 
 type Task = {
   id: string | number;
@@ -11,12 +12,14 @@ type SimpleTaskListProps = {
   tasks: Task[];
   onTasksChange?: (tasks: Task[]) => void;
   showDelete?: boolean;
+  colorPalette?: ColorPalette;
 };
 
 export default function SimpleTaskList({
   tasks: initialTasks,
   onTasksChange,
   showDelete = false,
+  colorPalette,
 }: SimpleTaskListProps) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [checkedTasks, setCheckedTasks] = useState<Set<string | number>>(new Set());
@@ -68,7 +71,11 @@ export default function SimpleTaskList({
               id={`task-${task.id}`}
               checked={checkedTasks.has(task.id)}
               onChange={(e) => handleTaskComplete(task.id, e.target.checked)}
-              className="h-4 w-4 cursor-pointer"
+              className={`h-4 w-4 cursor-pointer rounded border-2 transition-colors ${
+                colorPalette
+                  ? `border-[#7085FF]/60 bg-white text-[#7085FF] focus:ring-2 focus:ring-[#7085FF]/30 focus:border-[#7085FF] checked:bg-[#7085FF] checked:border-[#7085FF]`
+                  : "border-gray-300"
+              }`}
             />
             <label
               htmlFor={`task-${task.id}`}

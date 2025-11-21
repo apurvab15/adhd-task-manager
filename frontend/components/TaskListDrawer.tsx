@@ -70,6 +70,22 @@ export const orangePalette: ColorPalette = {
     hoverBg: "hover:bg-white",
 };
 
+export const periwinklePalette: ColorPalette = {
+    bg: "from-white via-[#7085FF]/5 to-white",
+    border: "border-[#7085FF]/20",
+    borderLight: "border-[#7085FF]/30",
+    shadow: "shadow-[#7085FF]/10",
+    text: "text-[#7085FF]",
+    textDark: "text-[#4A5FCC]",
+    textMuted: "text-[#7085FF]/60",
+    accent: "bg-[#7085FF]",
+    accentHover: "hover:bg-[#5A75FF]",
+    accentLight: "bg-[#7085FF]/10",
+    activeBg: "bg-[#7085FF]/15",
+    activeText: "text-[#4A5FCC]",
+    hoverBg: "hover:bg-[#7085FF]/5",
+};
+
 type TaskListDrawerProps = {
     taskLists: TaskList[];
     currentListId: number;

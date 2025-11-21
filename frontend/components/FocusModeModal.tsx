@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { violetPalette, skyPalette, type ColorPalette } from "./TaskListDrawer";
+import { violetPalette, skyPalette, periwinklePalette, type ColorPalette } from "./TaskListDrawer";
 
 type Task = {
   id: number;
@@ -28,7 +28,7 @@ const FOCUS_MODE_TIMER_KEY = "adhd-focus-mode-timer";
 
 export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }: FocusModeModalProps) {
   const router = useRouter();
-  const colorPalette: ColorPalette = mode === "inattentive" ? skyPalette : violetPalette;
+  const colorPalette: ColorPalette = mode === "inattentive" ? periwinklePalette : violetPalette;
   const [allTasks, setAllTasks] = useState<Array<{ task: Task; listName: string }>>([]);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<number>>(new Set());
   const [timerMinutes, setTimerMinutes] = useState(25);
@@ -134,7 +134,7 @@ export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }
               max={120}
               value={timerMinutes}
               onChange={(e) => setTimerMinutes(Math.max(1, parseInt(e.target.value) || 25))}
-              className={`w-full rounded-xl border ${colorPalette.borderLight} bg-white px-4 py-2 ${colorPalette.textDark} ${mode === "inattentive" ? "focus:border-sky-400" : "focus:border-violet-400"} focus:outline-none`}
+              className={`w-full rounded-xl border ${colorPalette.borderLight} bg-white px-4 py-2 ${colorPalette.textDark} ${mode === "inattentive" ? "focus:border-[#7085FF]" : "focus:border-violet-400"} focus:outline-none`}
             />
           </div>
 
@@ -169,7 +169,7 @@ export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }
                       type="checkbox"
                       checked={selectedTaskIds.has(task.id)}
                       onChange={() => handleTaskToggle(task.id)}
-                      className={`mt-1 h-4 w-4 cursor-pointer rounded ${colorPalette.border} ${colorPalette.text} ${mode === "inattentive" ? "focus:ring-sky-500" : "focus:ring-violet-500"}`}
+                      className={`mt-1 h-4 w-4 cursor-pointer rounded ${colorPalette.border} ${colorPalette.text} ${mode === "inattentive" ? "focus:ring-[#7085FF]" : "focus:ring-violet-500"}`}
                     />
                     <div className="flex-1">
                       <p className={`text-sm ${colorPalette.textDark}`}>{task.text}</p>
