@@ -25,36 +25,10 @@ type TaskListWindowProps = {
 };
 
 export default function TaskListWindow({ mode = "hyperactive", colorPalette = violetPalette }: TaskListWindowProps) {
-    const [taskLists, setTaskLists] = useState<TaskList[]>(() => {
-        if (typeof window === "undefined") {
-            return [{ id: 1, name: "Task List", tasks: [] }];
-        }
-        try {
-            const saved = window.localStorage.getItem(STORAGE_KEY);
-            if (saved) {
-                return JSON.parse(saved) as TaskList[];
-            }
-        } catch {
-            // Fall through to default
-        }
-        return [{ id: 1, name: "Task List", tasks: [] }];
-    });
-    const [currentListId, setCurrentListId] = useState<number>(() => {
-        // Initialize with first list's ID
-        if (typeof window === "undefined") {
-            return 1;
-        }
-        try {
-            const saved = window.localStorage.getItem(STORAGE_KEY);
-            if (saved) {
-                const lists = JSON.parse(saved) as TaskList[];
-                return lists.length > 0 ? lists[0].id : 1;
-            }
-        } catch {
-            // Fall through to default
-        }
-        return 1;
-    });
+    // Always start with default state to avoid hydration mismatch
+    const [taskLists, setTaskLists] = useState<TaskList[]>([{ id: 1, name: "Task List", tasks: [] }]);
+    const [currentListId, setCurrentListId] = useState<number>(1);
+    const [isHydrated, setIsHydrated] = useState(false);
     const [isDrawerOpen, setIsDrawerOpen] = useState(mode === "hyperactive");
     const [input, setInput] = useState("");
     const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -63,6 +37,26 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
     const titleInputRef = useRef<HTMLInputElement | null>(null);
     const nextTaskId = useRef(1);
     const nextListId = useRef(2);
+
+    // Load from localStorage after mount (client-side only)
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        
+        try {
+            const saved = window.localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                const parsed = JSON.parse(saved) as TaskList[];
+                if (parsed.length > 0) {
+                    setTaskLists(parsed);
+                    setCurrentListId(parsed[0].id);
+                }
+            }
+        } catch (error) {
+            console.error("Error loading tasks from localStorage:", error);
+        }
+        
+        setIsHydrated(true);
+    }, []);
 
     // Initialize nextTaskId and nextListId from existing data (only on mount)
     useEffect(() => {
@@ -78,11 +72,11 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Persist to localStorage
+    // Persist to localStorage (only after hydration to avoid overwriting with default state)
     useEffect(() => {
-        if (typeof window === "undefined") return;
+        if (typeof window === "undefined" || !isHydrated) return;
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(taskLists));
-    }, [taskLists]);
+    }, [taskLists, isHydrated]);
 
     // Ensure currentListId is valid
     useEffect(() => {
