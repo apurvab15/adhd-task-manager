@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import TaskListDrawer, { type ColorPalette, violetPalette } from "./TaskListDrawer";
+import { awardXPForTask } from "@/utils/gamification";
 
 type Task = {
     id: number;
@@ -134,8 +135,19 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
     }
 
     function toggleDone(taskId: number) {
-        setTaskLists((lists) =>
-            lists.map((list) =>
+        setTaskLists((lists) => {
+            const currentList = lists.find((list) => list.id === currentListId);
+            const task = currentList?.tasks.find((t) => t.id === taskId);
+            const isMarkingAsDone = task && !task.done;
+
+            // Award XP when marking a task as done (not when unchecking)
+            if (isMarkingAsDone && typeof window !== "undefined") {
+                awardXPForTask();
+                // Trigger a custom event to refresh stats on home page
+                window.dispatchEvent(new CustomEvent("taskCompleted"));
+            }
+
+            return lists.map((list) =>
                 list.id === currentListId
                     ? {
                         ...list,
@@ -144,8 +156,8 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
                         ),
                     }
                     : list
-            )
-        );
+            );
+        });
     }
 
     function removeTask(taskId: number) {

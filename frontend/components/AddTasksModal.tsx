@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { violetPalette, skyPalette, type ColorPalette } from "./TaskListDrawer";
+
+const STORAGE_KEY = "adhd-task-lists";
 
 type Task = {
   id: number;
@@ -16,22 +17,18 @@ type TaskList = {
   tasks: Task[];
 };
 
-type FocusModeModalProps = {
+type AddTasksModalProps = {
   isOpen: boolean;
   onClose: () => void;
+  onAddTasks: (tasks: Array<{ id: number; text: string; done: boolean; sourceListId?: number; sourceListName?: string }>) => void;
+  existingTaskIds: Set<number>;
   mode?: "inattentive" | "hyperactive";
 };
 
-const STORAGE_KEY = "adhd-task-lists";
-const FOCUS_MODE_STORAGE_KEY = "adhd-focus-mode-tasks";
-const FOCUS_MODE_TIMER_KEY = "adhd-focus-mode-timer";
-
-export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }: FocusModeModalProps) {
-  const router = useRouter();
+export default function AddTasksModal({ isOpen, onClose, onAddTasks, existingTaskIds, mode = "hyperactive" }: AddTasksModalProps) {
   const colorPalette: ColorPalette = mode === "inattentive" ? skyPalette : violetPalette;
-  const [allTasks, setAllTasks] = useState<Array<{ task: Task; listName: string }>>([]);
+  const [allTasks, setAllTasks] = useState<Array<{ task: Task; listName: string; listId: number }>>([]);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<number>>(new Set());
-  const [timerMinutes, setTimerMinutes] = useState(25);
 
   // Load all unticked tasks from all lists
   useEffect(() => {
@@ -41,12 +38,12 @@ export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }
       const saved = window.localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const taskLists: TaskList[] = JSON.parse(saved);
-        const untickedTasks: Array<{ task: Task; listName: string }> = [];
+        const untickedTasks: Array<{ task: Task; listName: string; listId: number }> = [];
 
         taskLists.forEach((list) => {
           list.tasks.forEach((task) => {
-            if (!task.done) {
-              untickedTasks.push({ task, listName: list.name });
+            if (!task.done && !existingTaskIds.has(task.id)) {
+              untickedTasks.push({ task, listName: list.name, listId: list.id });
             }
           });
         });
@@ -56,7 +53,7 @@ export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }
     } catch (error) {
       console.error("Error loading tasks:", error);
     }
-  }, [isOpen]);
+  }, [isOpen, existingTaskIds]);
 
   const handleTaskToggle = (taskId: number) => {
     setSelectedTaskIds((prev) => {
@@ -78,22 +75,21 @@ export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }
     }
   };
 
-  const handleStartFocusMode = () => {
+  const handleAdd = () => {
     if (selectedTaskIds.size === 0) return;
 
-    // Get selected tasks
     const selectedTasks = allTasks
       .filter(({ task }) => selectedTaskIds.has(task.id))
-      .map(({ task }) => ({ id: task.id, text: task.text }));
+      .map(({ task, listName, listId }) => ({
+        id: task.id,
+        text: task.text,
+        done: false,
+        sourceListId: listId,
+        sourceListName: listName,
+      }));
 
-    // Save to localStorage
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(FOCUS_MODE_STORAGE_KEY, JSON.stringify(selectedTasks));
-      window.localStorage.setItem(FOCUS_MODE_TIMER_KEY, timerMinutes.toString());
-    }
-
-    // Navigate to focus mode page with mode parameter
-    router.push(`/focus-mode?mode=${mode}`);
+    onAddTasks(selectedTasks);
+    setSelectedTaskIds(new Set());
     onClose();
   };
 
@@ -104,7 +100,7 @@ export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }
       <div className={`w-full max-w-2xl max-h-[90vh] rounded-3xl border ${colorPalette.border} bg-gradient-to-b ${colorPalette.bg} shadow-2xl ${colorPalette.shadow} flex flex-col my-auto`}>
         {/* Header */}
         <div className="flex items-center justify-between p-6 pb-4 flex-shrink-0">
-          <h2 className={`text-2xl font-semibold ${colorPalette.textDark}`}>Focus Mode Setup</h2>
+          <h2 className={`text-2xl font-semibold ${colorPalette.textDark}`}>Add Tasks from Task Lists</h2>
           <button
             onClick={onClose}
             className={`rounded-lg p-1 ${colorPalette.textMuted} transition-colors ${colorPalette.hoverBg}`}
@@ -123,22 +119,6 @@ export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }
 
         {/* Body - Scrollable */}
         <div className="px-6 pb-4 space-y-4 overflow-y-auto flex-1 min-h-0">
-          {/* Timer Setting */}
-          <div className={`rounded-2xl border ${colorPalette.borderLight} bg-white/80 p-4`}>
-            <label className={`mb-2 block text-sm font-semibold ${colorPalette.textDark}`}>
-              Timer Duration (minutes)
-            </label>
-            <input
-              type="number"
-              min={1}
-              max={120}
-              value={timerMinutes}
-              onChange={(e) => setTimerMinutes(Math.max(1, parseInt(e.target.value) || 25))}
-              className={`w-full rounded-xl border ${colorPalette.borderLight} bg-white px-4 py-2 ${colorPalette.textDark} ${mode === "inattentive" ? "focus:border-sky-400" : "focus:border-violet-400"} focus:outline-none`}
-            />
-          </div>
-
-          {/* Task Selection */}
           <div className={`rounded-2xl border ${colorPalette.borderLight} bg-white/80 p-4`}>
             <div className="mb-3 flex items-center justify-between">
               <label className={`text-sm font-semibold ${colorPalette.textDark}`}>
@@ -157,7 +137,7 @@ export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }
             <div className="max-h-64 space-y-2 overflow-y-auto">
               {allTasks.length === 0 ? (
                 <p className={`py-8 text-center text-sm ${colorPalette.textMuted}`}>
-                  No unticked tasks available. Complete some tasks first!
+                  No unticked tasks available to add.
                 </p>
               ) : (
                 allTasks.map(({ task, listName }) => (
@@ -192,11 +172,11 @@ export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }
               Cancel
             </button>
             <button
-              onClick={handleStartFocusMode}
+              onClick={handleAdd}
               disabled={selectedTaskIds.size === 0}
               className={`rounded-xl ${colorPalette.accent} px-4 py-2 text-sm font-semibold text-white transition-colors ${colorPalette.accentHover} disabled:opacity-50 disabled:cursor-not-allowed`}
             >
-              Start Focus Mode
+              Add Tasks
             </button>
           </div>
         </div>
