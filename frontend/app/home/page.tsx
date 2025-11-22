@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -50,8 +51,15 @@ type TaskList = {
   name: string;
   tasks: { id: number; text: string; done: boolean }[];
 };
-
 export default function HomePage() {
+  return (
+    <Suspense fallback={null}>
+      <HomePageData />
+    </Suspense>
+  );
+}
+
+export function HomePageData() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const modeParam = searchParams.get("mode");

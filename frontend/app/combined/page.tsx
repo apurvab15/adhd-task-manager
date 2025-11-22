@@ -62,7 +62,10 @@ export default function CombinedPage() {
   const [isHydrated, setIsHydrated] = useState(false);
   const [motivationMessage, setMotivationMessage] = useState("");
   const [input, setInput] = useState("");
-  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+  // const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
   const nextTaskId = useRef(1);
   const confettiRef = useRef<JSConfetti | null>(null);
   const hasTriggeredConfettiRef = useRef(false);
@@ -750,7 +753,7 @@ export default function CombinedPage() {
             {/* Input area with Add and Break Task buttons */}
             <div className={`mt-4 border-t border-zinc-200 pt-4 flex items-start gap-3 rounded-2xl border ${colorPalette.border} bg-white/80 p-3`}>
               <textarea
-                ref={inputRef}
+                ref={textareaRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 rows={2}
