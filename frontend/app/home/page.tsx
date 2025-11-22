@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useGamification } from "@/hooks/useGamification";
 import { getProgressPercentage, awardXPForTask } from "@/utils/gamification";
 import FocusModeModal from "@/components/FocusModeModal";
 import AddTasksModal from "@/components/AddTasksModal";
-import { violetPalette, type ColorPalette } from "@/components/TaskListDrawer";
+import { violetPalette, skyPalette, orangePalette, type ColorPalette } from "@/components/TaskListDrawer";
+
+type Mode = "inattentive" | "hyperactive";
 
 const STORAGE_KEY = "adhd-task-lists";
 const TODAY_TASKS_KEY = "adhd-today-tasks";
@@ -48,7 +51,12 @@ type TaskList = {
   tasks: { id: number; text: string; done: boolean }[];
 };
 
-export default function HyperactivePage() {
+export default function HomePage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const modeParam = searchParams.get("mode");
+  const mode: Mode = (modeParam === "inattentive" || modeParam === "hyperactive") ? modeParam : "hyperactive";
+  
   const { stats } = useGamification();
   const progressPercentage = getProgressPercentage(stats);
   const [isFocusModalOpen, setIsFocusModalOpen] = useState(false);
@@ -61,8 +69,13 @@ export default function HyperactivePage() {
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const nextTaskId = useRef(1);
 
-  // Use violet palette for hyperactive type
-  const colorPalette: ColorPalette = violetPalette;
+  // Get color palette based on mode
+  const colorPalette: ColorPalette = mode === "inattentive" ? skyPalette : violetPalette;
+  
+  // Helper function to create links with mode parameter
+  const createLink = (path: string) => {
+    return `${path}?mode=${mode}`;
+  };
 
   const getRandomMessage = () => {
     const randomIndex = Math.floor(Math.random() * MOTIVATION_MESSAGES.length);
@@ -247,23 +260,12 @@ export default function HyperactivePage() {
       {/* Navigation Bar */}
       <nav className="border-b border-black/5 bg-white/80 backdrop-blur-sm">
         <div className="flex items-center justify-between px-4 py-3">
-          <Link href="/hyperactive" className="text-violet-600 transition-colors hover:text-violet-700">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              className="h-6 w-6"
-            >
-              <path
-                fillRule="evenodd"
-                d="M9.293 2.293a1 1 0 0 1 1.414 0l7 7A1 1 0 0 1 17 11h-1v6a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-6H3a1 1 0 0 1-.707-1.707l7-7Z"
-                clipRule="evenodd"
-              />
-            </svg>
+          <Link href={createLink("/home")} className="text-xl font-semibold text-zinc-900">
+            Home
           </Link>
           <div className="flex items-center gap-4">
             <Link
-              href="/tasks?mode=hyperactive"
+              href={createLink("/tasks")}
               className="rounded-lg px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100"
             >
               Task Manager
@@ -305,7 +307,7 @@ export default function HyperactivePage() {
               </div>
               <div className="h-3 w-full overflow-hidden rounded-full bg-zinc-200">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-violet-500 to-rose-500 transition-all duration-500"
+                  className={`h-full rounded-full ${mode === "inattentive" ? "bg-gradient-to-r from-sky-500 to-blue-500" : "bg-gradient-to-r from-violet-500 to-rose-500"} transition-all duration-500`}
                   style={{ width: `${progressPercentage}%` }}
                 />
               </div>
@@ -332,9 +334,9 @@ export default function HyperactivePage() {
                 <p className="text-xs text-zinc-500">Total Tasks</p>
                 <p className={`text-2xl font-bold ${colorPalette.textDark}`}>{stats.tasksCompleted}</p>
               </div>
-              <div className="rounded-xl border border-rose-200 bg-white/80 p-3">
+              <div className={`rounded-xl border ${mode === "inattentive" ? "border-blue-200" : "border-rose-200"} bg-white/80 p-3`}>
                 <p className="text-xs text-zinc-500">Today</p>
-                <p className="text-2xl font-bold text-rose-900">{stats.tasksCompletedToday}</p>
+                <p className={`text-2xl font-bold ${mode === "inattentive" ? "text-blue-900" : "text-rose-900"}`}>{stats.tasksCompletedToday}</p>
               </div>
             </div>
 
@@ -376,7 +378,7 @@ export default function HyperactivePage() {
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-zinc-900">Task List Progress</h2>
               <Link
-                href="/tasks?mode=hyperactive"
+                href={createLink("/tasks")}
                 className={`rounded-lg p-1.5 ${colorPalette.text} transition-colors ${colorPalette.accentLight.replace('bg-', 'hover:bg-')}`}
                 title="Go to Task Manager"
               >
@@ -442,7 +444,7 @@ export default function HyperactivePage() {
               </div>
               <div className={`h-2 w-full overflow-hidden rounded-full ${colorPalette.borderLight.replace('border-', 'bg-')}`}>
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-violet-500 to-rose-500 transition-all duration-500"
+                  className={`h-full rounded-full ${mode === "inattentive" ? "bg-gradient-to-r from-sky-500 to-blue-500" : "bg-gradient-to-r from-violet-500 to-rose-500"} transition-all duration-500`}
                   style={{ width: `${totalToday > 0 ? (completedToday / totalToday) * 100 : 0}%` }}
                 />
               </div>
@@ -494,7 +496,7 @@ export default function HyperactivePage() {
                       type="checkbox"
                       checked={task.done}
                       onChange={() => handleTaskToggle(task.id)}
-                      className="h-4 w-4 cursor-pointer rounded border-zinc-300 text-violet-600 focus:ring-violet-500"
+                      className={`h-4 w-4 cursor-pointer rounded border-zinc-300 ${colorPalette.text} focus:ring-${mode === "inattentive" ? "sky" : "violet"}-500`}
                     />
                     <div className="flex-1 min-w-0">
                       <p
@@ -567,14 +569,15 @@ export default function HyperactivePage() {
         </div>
       </main>
 
-      <FocusModeModal isOpen={isFocusModalOpen} onClose={() => setIsFocusModalOpen(false)} mode="hyperactive" />
+      <FocusModeModal isOpen={isFocusModalOpen} onClose={() => setIsFocusModalOpen(false)} mode={mode} />
       <AddTasksModal
         isOpen={isAddTasksModalOpen}
         onClose={() => setIsAddTasksModalOpen(false)}
         onAddTasks={handleAddTasks}
         existingTaskIds={existingTaskIds}
-        mode="hyperactive"
+        mode={mode}
       />
     </div>
   );
 }
+
