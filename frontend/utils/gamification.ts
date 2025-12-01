@@ -7,8 +7,8 @@ export type UserStats = {
   level: number;
   currentLevelXP: number;
   xpToNextLevel: number;
-  tasksCompleted: number;
-  tasksCompletedToday: number;
+  tasksCompleted: number;        // total number of tasks ever completed
+  tasksCompletedToday: number;   // number of tasks completed today
 };
 
 export function calculateLevel(xp: number): { level: number; currentLevelXP: number; xpToNextLevel: number } {
@@ -94,6 +94,48 @@ export function awardXPForTask(): UserStats {
   stats.totalXP += XP_PER_TASK;
   stats.tasksCompleted += 1;
   stats.tasksCompletedToday = lastDate === today ? stats.tasksCompletedToday + 1 : 1;
+
+  const { level, currentLevelXP, xpToNextLevel } = calculateLevel(stats.totalXP);
+  stats.level = level;
+  stats.currentLevelXP = currentLevelXP;
+  stats.xpToNextLevel = xpToNextLevel;
+
+  saveStats(stats);
+  return stats;
+}
+
+/**
+ * Revoke XP and task counts when a previously completed task is marked as incomplete again.
+ * This mirrors {@link awardXPForTask} but in reverse, and keeps values from going below zero.
+ */
+export function revokeXPForTaskCompletion(): UserStats {
+  const stats = getStats();
+
+  // Remove XP for this task, but never go below 0
+  stats.totalXP = Math.max(0, stats.totalXP - XP_PER_TASK);
+
+  // Decrement completed counters, clamped at 0
+  stats.tasksCompleted = Math.max(0, stats.tasksCompleted - 1);
+  stats.tasksCompletedToday = Math.max(0, stats.tasksCompletedToday - 1);
+
+  const { level, currentLevelXP, xpToNextLevel } = calculateLevel(stats.totalXP);
+  stats.level = level;
+  stats.currentLevelXP = currentLevelXP;
+  stats.xpToNextLevel = xpToNextLevel;
+
+  saveStats(stats);
+  return stats;
+}
+
+/**
+ * Apply a small penalty when a task is removed without ever being completed.
+ * This does not change task counters, only total XP / level.
+ */
+export function penalizeXPForUncompletedTask(): UserStats {
+  const stats = getStats();
+
+  // Small penalty – use the same unit as a completion, but clamp at 0
+  stats.totalXP = Math.max(0, stats.totalXP - XP_PER_TASK);
 
   const { level, currentLevelXP, xpToNextLevel } = calculateLevel(stats.totalXP);
   stats.level = level;

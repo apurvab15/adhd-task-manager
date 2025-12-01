@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import TaskListDrawer, { type ColorPalette, violetPalette } from "./TaskListDrawer";
-import { awardXPForTask } from "@/utils/gamification";
+import { awardXPForTask, revokeXPForTaskCompletion, penalizeXPForUncompletedTask } from "@/utils/gamification";
 
 type Task = {
     id: number;
@@ -138,11 +138,19 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
         setTaskLists((lists) => {
             const currentList = lists.find((list) => list.id === currentListId);
             const task = currentList?.tasks.find((t) => t.id === taskId);
-            
-            // Award XP only when marking a task as done (not when unchecking) and only once
-            if (task && !task.done && typeof window !== "undefined") {
-                awardXPForTask();
-                // Trigger a custom event to refresh stats on home page
+
+            if (task && typeof window !== "undefined") {
+                const newDone = !task.done;
+
+                if (newDone && !task.done) {
+                    // Marking as done – award XP
+                    awardXPForTask();
+                } else if (!newDone && task.done) {
+                    // Unchecking a completed task – revoke XP
+                    revokeXPForTaskCompletion();
+                }
+
+                // Notify listeners that gamification stats changed
                 window.dispatchEvent(new CustomEvent("taskCompleted"));
             }
 
@@ -160,13 +168,24 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
     }
 
     function removeTask(taskId: number) {
-        setTaskLists((lists) =>
-            lists.map((list) =>
+        setTaskLists((lists) => {
+            if (typeof window !== "undefined") {
+                const currentList = lists.find((list) => list.id === currentListId);
+                const task = currentList?.tasks.find((t) => t.id === taskId);
+
+                // Apply a small penalty only if the task was never completed
+                if (task && !task.done) {
+                    penalizeXPForUncompletedTask();
+                    window.dispatchEvent(new CustomEvent("taskCompleted"));
+                }
+            }
+
+            return lists.map((list) =>
                 list.id === currentListId
                     ? { ...list, tasks: list.tasks.filter((t) => t.id !== taskId) }
                     : list
-            )
-        );
+            );
+        });
     }
 
     function startEditingTitle() {

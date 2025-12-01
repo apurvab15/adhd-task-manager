@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useGamification } from "@/hooks/useGamification";
-import { getProgressPercentage, awardXPForTask } from "@/utils/gamification";
+import { getProgressPercentage, awardXPForTask, revokeXPForTaskCompletion, penalizeXPForUncompletedTask } from "@/utils/gamification";
 import FocusModeModal from "@/components/FocusModeModal";
 import AddTasksModal from "@/components/AddTasksModal";
 import { violetPalette, skyPalette, orangePalette, type ColorPalette } from "@/components/TaskListDrawer";
@@ -186,9 +186,15 @@ export default function HomePage() {
       if (!task) return tasks;
       
       const newDone = !task.done;
-      // Award XP only when marking as done (not when unchecking) and only once
-      if (newDone && !task.done && typeof window !== "undefined") {
-        awardXPForTask();
+      if (typeof window !== "undefined") {
+        if (newDone && !task.done) {
+          // Marking as done – award XP
+          awardXPForTask();
+        } else if (!newDone && task.done) {
+          // Unchecking a completed task – revoke XP
+          revokeXPForTaskCompletion();
+        }
+        // Notify listeners that gamification stats changed
         window.dispatchEvent(new CustomEvent("taskCompleted"));
       }
       
@@ -197,7 +203,17 @@ export default function HomePage() {
   };
 
   const handleRemoveTask = (taskId: number) => {
-    setTodayTasks((tasks) => tasks.filter((task) => task.id !== taskId));
+    setTodayTasks((tasks) => {
+      if (typeof window !== "undefined") {
+        const task = tasks.find((t) => t.id === taskId);
+        // Apply a small penalty only if the task was never completed
+        if (task && !task.done) {
+          penalizeXPForUncompletedTask();
+          window.dispatchEvent(new CustomEvent("taskCompleted"));
+        }
+      }
+      return tasks.filter((task) => task.id !== taskId);
+    });
   };
 
   const handleAddTasks = (tasks: Array<{ id: number; text: string; done: boolean; sourceListId?: number; sourceListName?: string }>) => {

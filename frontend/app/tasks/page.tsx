@@ -69,12 +69,12 @@ export default function TasksPage() {
         </div>
       </nav>
 
-      <main className="mx-auto flex min-h-[calc(100vh-73px)] w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
+      <main className="mx-auto flex min-h-[calc(100vh-73px)] w-full max-w-7xl flex-col gap-8 px-4 py-2 sm:px-6 lg:px-8">
         <section className="flex items-start justify-between">
           <div className="space-y-2">
-            <h1 className="text-4xl font-semibold text-zinc-900 sm:text-5xl">
+            <h3 className="text-2xl font-semibold text-zinc-900 sm:text-3xl">
               Task Manager
-            </h1>
+            </h3>
             <p className="text-lg text-zinc-600">
               Organize your tasks across multiple lists. Create, edit, and manage your to-dos with ease.
             </p>

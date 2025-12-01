@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useGamification } from "@/hooks/useGamification";
-import { getProgressPercentage, awardXPForTask } from "@/utils/gamification";
+import { getProgressPercentage, awardXPForTask, revokeXPForTaskCompletion, penalizeXPForUncompletedTask } from "@/utils/gamification";
 import FocusModeModal from "@/components/FocusModeModal";
 import AddTasksModal from "@/components/AddTasksModal";
 import { violetPalette, periwinklePalette, type ColorPalette } from "@/components/TaskListDrawer";
@@ -183,8 +183,15 @@ export default function CombinedPage() {
       if (!task) return tasks;
       
       const newDone = !task.done;
-      if (newDone && !task.done && typeof window !== "undefined") {
-        awardXPForTask();
+      if (typeof window !== "undefined") {
+        if (newDone && !task.done) {
+          // Marking as done – award XP
+          awardXPForTask();
+        } else if (!newDone && task.done) {
+          // Unchecking a completed task – revoke XP
+          revokeXPForTaskCompletion();
+        }
+        // Notify listeners that gamification stats changed
         window.dispatchEvent(new CustomEvent("taskCompleted"));
       }
       
@@ -193,7 +200,17 @@ export default function CombinedPage() {
   };
 
   const handleRemoveTask = (taskId: number) => {
-    setTodayTasks((tasks) => tasks.filter((task) => task.id !== taskId));
+    setTodayTasks((tasks) => {
+      if (typeof window !== "undefined") {
+        const task = tasks.find((t) => t.id === taskId);
+        // Apply a small penalty only if the task was never completed
+        if (task && !task.done) {
+          penalizeXPForUncompletedTask();
+          window.dispatchEvent(new CustomEvent("taskCompleted"));
+        }
+      }
+      return tasks.filter((task) => task.id !== taskId);
+    });
   };
 
   const handleAddTasks = (tasks: Array<{ id: number; text: string; done: boolean; sourceListId?: number; sourceListName?: string }>) => {
@@ -470,7 +487,7 @@ export default function CombinedPage() {
             {/* Input area - Small and Simple */}
             <div className="mt-6 border-t border-[#7085FF]/10 pt-4 flex items-center gap-2">
               <input
-                ref={inputRef}
+                ref={inputRef as React.RefObject<HTMLInputElement>}
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -750,7 +767,7 @@ export default function CombinedPage() {
             {/* Input area with Add and Break Task buttons */}
             <div className={`mt-4 border-t border-zinc-200 pt-4 flex items-start gap-3 rounded-2xl border ${colorPalette.border} bg-white/80 p-3`}>
               <textarea
-                ref={inputRef}
+                ref={inputRef as React.RefObject<HTMLTextAreaElement>}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 rows={2}
