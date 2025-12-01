@@ -4,9 +4,12 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useGamification } from "@/hooks/useGamification";
 import { getProgressPercentage, awardXPForTask } from "@/utils/gamification";
+import { useTaskBreaker } from "@/hooks/useTaseBreaking";
 import FocusModeModal from "@/components/FocusModeModal";
 import AddTasksModal from "@/components/AddTasksModal";
+import BreakTasksModal from "@/components/BreakTasksModal";
 import { violetPalette, type ColorPalette } from "@/components/TaskListDrawer";
+import JSConfetti from "js-confetti";
 
 const STORAGE_KEY = "adhd-task-lists";
 const TODAY_TASKS_KEY = "adhd-today-tasks";
@@ -53,6 +56,9 @@ export default function HyperactivePage() {
   const progressPercentage = getProgressPercentage(stats);
   const [isFocusModalOpen, setIsFocusModalOpen] = useState(false);
   const [isAddTasksModalOpen, setIsAddTasksModalOpen] = useState(false);
+  const [isBreakTasksModalOpen, setIsBreakTasksModalOpen] = useState(false);
+  const [brokenTasks, setBrokenTasks] = useState<string[]>([]);
+  const [originalTaskText, setOriginalTaskText] = useState<string>("");
   const [todayTasks, setTodayTasks] = useState<Task[]>([]);
   const [taskLists, setTaskLists] = useState<TaskList[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
@@ -60,9 +66,32 @@ export default function HyperactivePage() {
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const nextTaskId = useRef(1);
+  const nextListId = useRef(1);
+  const confettiRef = useRef<JSConfetti | null>(null);
+  const hasTriggeredConfettiRef = useRef(false);
+  const previousLevelRef = useRef(stats.level);
+  const isInitialMountRef = useRef(true);
+  const { breakTask, isBreaking, error } = useTaskBreaker("hyperactive");
 
   // Use violet palette for hyperactive type
   const colorPalette: ColorPalette = violetPalette;
+
+  // Initialize confetti
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      confettiRef.current = new JSConfetti();
+    }
+  }, []);
+
+  // Sync previousLevelRef after stats are loaded and mark initial mount as complete
+  useEffect(() => {
+    previousLevelRef.current = stats.level;
+    // Mark initial mount as complete after a brief delay to ensure stats are loaded
+    const timer = setTimeout(() => {
+      isInitialMountRef.current = false;
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   const getRandomMessage = () => {
     const randomIndex = Math.floor(Math.random() * MOTIVATION_MESSAGES.length);
@@ -122,6 +151,17 @@ export default function HyperactivePage() {
       if (savedLists) {
         const parsed = JSON.parse(savedLists);
         setTaskLists(parsed || []);
+
+        // Initialize nextListId from existing lists to avoid ID conflicts
+        if (parsed && parsed.length > 0) {
+          const maxListId = Math.max(...parsed.map((list: TaskList) => list.id));
+          nextListId.current = maxListId + 1;
+          const allTasks = parsed.flatMap((list: TaskList) => list.tasks);
+          if (allTasks.length > 0) {
+            const maxTaskId = Math.max(...allTasks.map((t: { id: number }) => t.id));
+            nextTaskId.current = Math.max(nextTaskId.current, maxTaskId + 1);
+          }
+        }
       }
     } catch (error) {
       console.error("Error loading data:", error);
@@ -166,6 +206,12 @@ export default function HyperactivePage() {
       JSON.stringify({ date: today, tasks: todayTasks })
     );
   }, [todayTasks, isHydrated]);
+
+  // Save task lists to localStorage
+  useEffect(() => {
+    if (!isHydrated || typeof window === "undefined") return;
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(taskLists));
+  }, [taskLists, isHydrated]);
 
   const handleTaskToggle = (taskId: number) => {
     setTodayTasks((tasks) => {
@@ -218,10 +264,94 @@ export default function HyperactivePage() {
     el.focus();
   };
 
+  const handleBreakTasks = async (text: string) => {
+    const taskText = text.trim();
+    if (!taskText) return;
+    
+    setOriginalTaskText(taskText);
+    setIsBreakTasksModalOpen(true);
+    
+    try {
+      const subTasks = await breakTask(taskText, "hyperactive");
+      console.log("hyperactive page: subTasks", subTasks);
+      if (subTasks && subTasks.length === 0) {
+        setIsBreakTasksModalOpen(false);
+        alert("No sub-tasks were generated. Please try again.");
+        return;
+      }
+      setBrokenTasks(subTasks || []);
+    } catch (error) {
+      console.error("Error breaking down task:", error);
+      setIsBreakTasksModalOpen(false);
+      alert(error instanceof Error ? error.message : "Failed to break down task. Please try again.");
+    }
+  };
+
+  const handleDiscardBrokenTasks = () => {
+    setBrokenTasks([]);
+    setOriginalTaskText("");
+    setIsBreakTasksModalOpen(false);
+    setInput("");
+    inputRef.current?.focus();
+  };
+
+  const handleAddBrokenTasks = (brokenTasksList: Array<{ id: number; text: string }>) => {
+    if (brokenTasksList.length === 0) return;
+
+    const validTasks = brokenTasksList.filter((t) => t.text.trim() !== "");
+    if (validTasks.length === 0) return;
+
+    // Generate unique IDs for tasks
+    const tasksWithIds = validTasks.map((task) => ({
+      id: nextTaskId.current++,
+      text: task.text.trim(),
+      done: false,
+    }));
+
+    // Create a new task list with the broken tasks
+    const newListName = originalTaskText.slice(0, 30) + (originalTaskText.length > 30 ? "..." : "");
+    const newList: TaskList = {
+      id: nextListId.current++,
+      name: newListName,
+      tasks: tasksWithIds.map((task) => ({
+        id: task.id,
+        text: task.text,
+        done: false,
+      })),
+    };
+
+    // Add the new list to task lists
+    setTaskLists((prev) => [...prev, newList]);
+
+    // Add tasks to today's tasks
+    const todayTasksWithIds: Task[] = tasksWithIds.map((task) => ({
+      ...task,
+      sourceListId: newList.id,
+      sourceListName: newList.name,
+    }));
+
+    setTodayTasks((prev) => {
+      // Filter out duplicates based on text content
+      const existingTexts = new Set(prev.map((t) => t.text.toLowerCase().trim()));
+      const newTasks = todayTasksWithIds.filter(
+        (t) => !existingTexts.has(t.text.toLowerCase().trim())
+      );
+      return [...newTasks, ...prev];
+    });
+
+    // Clean up
+    setBrokenTasks([]);
+    setOriginalTaskText("");
+    setIsBreakTasksModalOpen(false);
+    setInput("");
+    inputRef.current?.focus();
+  };
+
   const existingTaskIds = new Set(todayTasks.map((t) => t.id));
 
   const completedToday = todayTasks.filter((t) => t.done).length;
   const totalToday = todayTasks.length;
+  const allTasksCompleted = totalToday > 0 && completedToday === totalToday;
 
   // Calculate overall task statistics
   const allTasks = taskLists.flatMap((list) => list.tasks);
@@ -241,6 +371,35 @@ export default function HyperactivePage() {
       rate,
     };
   });
+
+  // Trigger confetti when all tasks are completed
+  useEffect(() => {
+    if (allTasksCompleted && confettiRef.current && !hasTriggeredConfettiRef.current) {
+      hasTriggeredConfettiRef.current = true;
+      confettiRef.current.addConfetti({
+        emojis: ["🎉", "✨", "🌟", "💫", "🎊"],
+        emojiSize: 100,
+        confettiNumber: 50,
+      });
+    } else if (!allTasksCompleted) {
+      // Reset the flag when tasks become incomplete again
+      hasTriggeredConfettiRef.current = false;
+    }
+  }, [allTasksCompleted]);
+
+  // Trigger confetti when leveling up (skip on initial mount)
+  useEffect(() => {
+    if (isInitialMountRef.current) return;
+    
+    if (stats.level > previousLevelRef.current && confettiRef.current) {
+      previousLevelRef.current = stats.level;
+      confettiRef.current.addConfetti({
+        emojis: ["🏆", "⭐", "🎉", "🌟", "✨", "💎"],
+        emojiSize: 100,
+        confettiNumber: 60,
+      });
+    }
+  }, [stats.level]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-50 via-white to-slate-100">
@@ -370,88 +529,8 @@ export default function HyperactivePage() {
           </div>
         </div>
 
-        {/* Middle Column - Task List Progress */}
-        <div className="flex-1 rounded-2xl border border-black/5 bg-white/90 p-6 shadow-lg shadow-black/5 flex flex-col overflow-y-auto">
-          <div className="mb-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-zinc-900">Task List Progress</h2>
-              <Link
-                href="/tasks?mode=hyperactive"
-                className={`rounded-lg p-1.5 ${colorPalette.text} transition-colors ${colorPalette.accentLight.replace('bg-', 'hover:bg-')}`}
-                title="Go to Task Manager"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className="h-4 w-4"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M3 4.25A2.25 2.25 0 0 1 5.25 2h5.5A2.25 2.25 0 0 1 13 4.25v2a.75.75 0 0 1-1.5 0v-2a.75.75 0 0 0-.75-.75h-5.5a.75.75 0 0 0-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 0 0 .75-.75v-2a.75.75 0 0 1 1.5 0v2A2.25 2.25 0 0 1 10.75 18h-5.5A2.25 2.25 0 0 1 3 15.75V4.25Z"
-                    clipRule="evenodd"
-                  />
-                  <path
-                    fillRule="evenodd"
-                    d="M19 10a.75.75 0 0 0-.75-.75H8.704l1.048-.943a.75.75 0 1 0-1.004-1.114l-2.5 2.25a.75.75 0 0 0 0 1.114l2.5 2.25a.75.75 0 1 0 1.004-1.114l-1.048-.943h9.546A.75.75 0 0 0 19 10Z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </Link>
-            </div>
-            <p className="mt-1 text-xs text-zinc-600">
-              Completion rate by list
-            </p>
-          </div>
-
-          <div className="space-y-4 flex-1">
-            {listProgress.length === 0 ? (
-              <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-zinc-200 bg-zinc-50 p-8 text-center">
-                <p className="text-sm text-zinc-500">
-                  No task lists yet. Create one in Task Manager!
-                </p>
-              </div>
-            ) : (
-              listProgress.map((list, index) => (
-                <div key={index} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-zinc-900 truncate">{list.name}</p>
-                    <span className="text-xs text-zinc-600 ml-2">
-                      {list.completed}/{list.total}
-                    </span>
-                  </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-200">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-orange-400 to-rose-500 transition-all duration-500"
-                      style={{ width: `${list.rate}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-zinc-500">{Math.round(list.rate)}% complete</p>
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Today's Progress Summary */}
-          <div className={`mt-6 rounded-xl border ${colorPalette.borderLight} ${colorPalette.accentLight}/50 p-4`}>
-            <p className={`text-xs font-semibold ${colorPalette.textDark} mb-2`}>Today&apos;s Progress</p>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-zinc-600">
-                <span>Today&apos;s Tasks</span>
-                <span>{completedToday}/{totalToday}</span>
-              </div>
-              <div className={`h-2 w-full overflow-hidden rounded-full ${colorPalette.borderLight.replace('border-', 'bg-')}`}>
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-violet-500 to-rose-500 transition-all duration-500"
-                  style={{ width: `${totalToday > 0 ? (completedToday / totalToday) * 100 : 0}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column - Today's Task List */}
-        <div className="flex-1 rounded-2xl border border-black/5 bg-white/90 p-6 shadow-lg shadow-black/5 flex flex-col">
+        {/* Middle Column - Today's Task List */}
+        <div className="flex-[2] rounded-2xl border border-black/5 bg-white/90 p-6 shadow-lg shadow-black/5 flex flex-col">
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-xl font-semibold text-zinc-900">Today&apos;s Tasks</h2>
@@ -552,16 +631,96 @@ export default function HyperactivePage() {
                   <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
                 </svg>
               </button>
-
               <button
-                onClick={breakTaskAtCaret}
-                className={`rounded-2xl border ${colorPalette.borderLight} px-4 py-2 text-sm font-semibold ${colorPalette.text} transition ${colorPalette.accentLight.replace('bg-', 'hover:bg-')}`}
-                title="Split the current input at the cursor into two tasks"
+                onClick={() => handleBreakTasks(input)} 
+                disabled={isBreaking}
+                title={isBreaking ? "Breaking down task..." : "Break down task using AI"}
+                className={`rounded-2xl border ${colorPalette.borderLight} px-4 py-2 text-sm font-semibold ${colorPalette.text} transition ${colorPalette.accentLight.replace('bg-', 'hover:bg-')} disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-5">
                   <path d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684ZM13.949 13.684a1 1 0 0 0-1.898 0l-.184.551a1 1 0 0 1-.632.633l-.551.183a1 1 0 0 0 0 1.898l.551.183a1 1 0 0 1 .633.633l.183.551a1 1 0 0 0 1.898 0l.184-.551a1 1 0 0 1 .632-.633l.551-.183a1 1 0 0 0 0-1.898l-.551-.184a1 1 0 0 1-.633-.632l-.183-.551Z" />
                 </svg>
               </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column - Task List Progress */}
+        <div className="flex-1 rounded-2xl border border-black/5 bg-white/90 p-6 shadow-lg shadow-black/5 flex flex-col overflow-y-auto">
+          <div className="mb-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-zinc-900">Task List Progress</h2>
+              <Link
+                href="/tasks?mode=hyperactive"
+                className={`rounded-lg p-1.5 ${colorPalette.text} transition-colors ${colorPalette.accentLight.replace('bg-', 'hover:bg-')}`}
+                title="Go to Task Manager"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="h-4 w-4"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M3 4.25A2.25 2.25 0 0 1 5.25 2h5.5A2.25 2.25 0 0 1 13 4.25v2a.75.75 0 0 1-1.5 0v-2a.75.75 0 0 0-.75-.75h-5.5a.75.75 0 0 0-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 0 0 .75-.75v-2a.75.75 0 0 1 1.5 0v2A2.25 2.25 0 0 1 10.75 18h-5.5A2.25 2.25 0 0 1 3 15.75V4.25Z"
+                    clipRule="evenodd"
+                  />
+                  <path
+                    fillRule="evenodd"
+                    d="M19 10a.75.75 0 0 0-.75-.75H8.704l1.048-.943a.75.75 0 1 0-1.004-1.114l-2.5 2.25a.75.75 0 0 0 0 1.114l2.5 2.25a.75.75 0 1 0 1.004-1.114l-1.048-.943h9.546A.75.75 0 0 0 19 10Z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </Link>
+            </div>
+            <p className="mt-1 text-xs text-zinc-600">
+              Completion rate by list
+            </p>
+          </div>
+
+          <div className="space-y-4 flex-1">
+            {listProgress.length === 0 ? (
+              <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-zinc-200 bg-zinc-50 p-8 text-center">
+                <p className="text-sm text-zinc-500">
+                  No task lists yet. Create one in Task Manager!
+                </p>
+              </div>
+            ) : (
+              listProgress.map((list, index) => (
+                <div key={index} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-zinc-900 truncate">{list.name}</p>
+                    <span className="text-xs text-zinc-600 ml-2">
+                      {list.completed}/{list.total}
+                    </span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-200">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-orange-400 to-rose-500 transition-all duration-500"
+                      style={{ width: `${list.rate}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-zinc-500">{Math.round(list.rate)}% complete</p>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Today's Progress Summary */}
+          <div className={`mt-6 rounded-xl border ${colorPalette.borderLight} ${colorPalette.accentLight}/50 p-4`}>
+            <p className={`text-xs font-semibold ${colorPalette.textDark} mb-2`}>Today&apos;s Progress</p>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs text-zinc-600">
+                <span>Today&apos;s Tasks</span>
+                <span>{completedToday}/{totalToday}</span>
+              </div>
+              <div className={`h-2 w-full overflow-hidden rounded-full ${colorPalette.borderLight.replace('border-', 'bg-')}`}>
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-violet-500 to-rose-500 transition-all duration-500"
+                  style={{ width: `${totalToday > 0 ? (completedToday / totalToday) * 100 : 0}%` }}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -574,6 +733,20 @@ export default function HyperactivePage() {
         onAddTasks={handleAddTasks}
         existingTaskIds={existingTaskIds}
         mode="hyperactive"
+      />
+      <BreakTasksModal
+        isOpen={isBreakTasksModalOpen}
+        isLoading={isBreaking}
+        tasks={brokenTasks}
+        originalTask={originalTaskText}
+        onClose={() => {
+          if (!isBreaking) {
+            handleDiscardBrokenTasks();
+          }
+        }}
+        onDiscard={handleDiscardBrokenTasks}
+        onAdd={handleAddBrokenTasks}
+        colorPalette={colorPalette}
       />
     </div>
   );
