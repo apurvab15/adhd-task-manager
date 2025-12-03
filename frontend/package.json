@@ -2,11 +2,15 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
+  "homepage": "https://apurvab15.github.io/adhd-task-manager",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "deploy": "gh-pages -d out --nojekyll",
+    "predeploy": "npm run build"
+
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -23,6 +27,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.0.3",
+    "gh-pages": "^6.3.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   },
