@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import TaskListDrawer, { type ColorPalette, violetPalette } from "./TaskListDrawer";
 import { awardXPForTask, revokeXPForTaskCompletion, penalizeXPForUncompletedTask } from "@/utils/gamification";
+import { useTaskBreaker } from "@/hooks/useTaseBreaking";
+import BreakTasksModal from "./BreakTasksModal";
 
 type Task = {
     id: number;
@@ -44,10 +46,14 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
     const [input, setInput] = useState("");
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [editingTitle, setEditingTitle] = useState("");
+    const [isBreakTasksModalOpen, setIsBreakTasksModalOpen] = useState(false);
+    const [brokenTasks, setBrokenTasks] = useState<string[]>([]);
+    const [originalTaskText, setOriginalTaskText] = useState<string>("");
     const inputRef = useRef<HTMLTextAreaElement | null>(null);
     const titleInputRef = useRef<HTMLInputElement | null>(null);
     const nextTaskId = useRef(1);
     const nextListId = useRef(2);
+    const { breakTask, isBreaking, error } = useTaskBreaker(mode);
 
     // Load from localStorage after mount (client-side only)
     useEffect(() => {
@@ -145,6 +151,67 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
         setInput("");
         el.focus();
     }
+
+    const handleBreakTasks = async (text: string) => {
+        const taskText = text.trim();
+        if (!taskText) return;
+        
+        setOriginalTaskText(taskText);
+        setIsBreakTasksModalOpen(true);
+        
+        try {
+            const subTasks = await breakTask(taskText, mode);
+            console.log("TaskList: subTasks", subTasks);
+            if (subTasks && subTasks.length === 0) {
+                setIsBreakTasksModalOpen(false);
+                alert("No sub-tasks were generated. Please try again.");
+                return;
+            }
+            setBrokenTasks(subTasks || []);
+        } catch (error) {
+            console.error("Error breaking down task:", error);
+            setIsBreakTasksModalOpen(false);
+            alert(error instanceof Error ? error.message : "Failed to break down task. Please try again.");
+        }
+    };
+
+    const handleDiscardBrokenTasks = () => {
+        setBrokenTasks([]);
+        setOriginalTaskText("");
+        setIsBreakTasksModalOpen(false);
+        setInput("");
+        inputRef.current?.focus();
+    };
+
+    const handleAddBrokenTasks = (brokenTasksList: Array<{ id: number; text: string }>) => {
+        if (brokenTasksList.length === 0) return;
+
+        const validTasks = brokenTasksList.filter((t) => t.text.trim() !== "");
+        if (validTasks.length === 0) return;
+
+        // Generate unique IDs for tasks
+        const tasksWithIds = validTasks.map((task) => ({
+            id: nextTaskId.current++,
+            text: task.text.trim(),
+            done: false,
+        }));
+
+        // Add tasks to the current list
+        setTaskLists((lists) =>
+            lists.map((list) =>
+                list.id === currentListId
+                    ? { ...list, tasks: [...list.tasks, ...tasksWithIds] }
+                    : list
+            )
+        );
+
+        // Clean up
+        setBrokenTasks([]);
+        setOriginalTaskText("");
+        setIsBreakTasksModalOpen(false);
+        setInput("");
+        inputRef.current?.focus();
+    };
 
     function toggleDone(taskId: number) {
         setTaskLists((lists) => {
@@ -295,6 +362,7 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
      }*/
 
     return (
+        <>
         <div className="flex h-full min-h-[70vh] gap-6">
             <TaskListDrawer
                 taskLists={taskLists}
@@ -408,7 +476,15 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
                     ref={inputRef}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    //onKeyDown={handleKeyDown}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            addTask(input);
+                        } else if (e.key === "Enter" && e.shiftKey) {
+                            e.preventDefault();
+                            handleBreakTasks(input);
+                        }
+                    }}
                     rows={2}
                     placeholder="Type a task... (Enter = add, Shift+Enter = break)"
                     className={`flex-1 resize-none rounded-2xl border ${colorPalette.border} bg-white/80 p-3 text-sm ${colorPalette.text} ${colorPalette.borderLight.replace('border-', 'focus:border-')} focus:outline-none`}
@@ -426,18 +502,34 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
                     </button>
 
                     <button
-                        onClick={breakTaskAtCaret}
-                        className={`rounded-2xl border ${colorPalette.borderLight} px-4 py-2 text-sm font-semibold ${colorPalette.text} transition ${colorPalette.accentLight.replace('bg-', 'hover:bg-')}`}
-                        title="Split the current input at the cursor into two tasks"
+                        onClick={() => handleBreakTasks(input)}
+                        disabled={isBreaking}
+                        className={`rounded-2xl border ${colorPalette.borderLight} px-4 py-2 text-sm font-semibold ${colorPalette.text} transition ${colorPalette.accentLight.replace('bg-', 'hover:bg-')} disabled:opacity-50 disabled:cursor-not-allowed`}
+                        title={isBreaking ? "Breaking down task..." : "Break down task using AI"}
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-5">
                             <path d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684ZM13.949 13.684a1 1 0 0 0-1.898 0l-.184.551a1 1 0 0 1-.632.633l-.551.183a1 1 0 0 0 0 1.898l.551.183a1 1 0 0 1 .633.633l.183.551a1 1 0 0 0 1.898 0l.184-.551a1 1 0 0 1 .632-.633l.551-.183a1 1 0 0 0 0-1.898l-.551-.184a1 1 0 0 1-.633-.632l-.183-.551Z" />
                         </svg>
-
                     </button>
                 </div>
             </div>
         </div>
         </div>
+
+        <BreakTasksModal
+            isOpen={isBreakTasksModalOpen}
+            isLoading={isBreaking}
+            tasks={brokenTasks}
+            originalTask={originalTaskText}
+            onClose={() => {
+                if (!isBreaking) {
+                    handleDiscardBrokenTasks();
+                }
+            }}
+            onDiscard={handleDiscardBrokenTasks}
+            onAdd={handleAddBrokenTasks}
+            colorPalette={colorPalette}
+        />
+        </>
     );
 }
