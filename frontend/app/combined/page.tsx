@@ -75,6 +75,15 @@ export default function CombinedPage() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
+  // Helper function to focus the appropriate input based on mode
+  const focusInput = () => {
+    if (mode === "inattentive") {
+      inputRef.current?.focus();
+    } else {
+      textareaRef.current?.focus();
+    }
+  };
+
   const nextTaskId = useRef(1);
   const nextListId = useRef(1);
   const confettiRef = useRef<JSConfetti | null>(null);
@@ -425,7 +434,7 @@ export default function CombinedPage() {
     const newTask: Task = { id: nextTaskId.current++, text: t, done: false };
     setTodayTasks((prev) => [...prev, newTask]);
     setInput("");
-    inputRef.current?.focus();
+    focusInput();
   };
 
   const handleBreakTasks = async (text: string) => {
@@ -456,7 +465,7 @@ export default function CombinedPage() {
     setOriginalTaskText("");
     setIsBreakTasksModalOpen(false);
     setInput("");
-    inputRef.current?.focus();
+    focusInput();
   };
 
   const handleAddBrokenTasks = (brokenTasksList: Array<{ id: number; text: string }>) => {
@@ -513,7 +522,7 @@ export default function CombinedPage() {
     setOriginalTaskText("");
     setIsBreakTasksModalOpen(false);
     setInput("");
-    inputRef.current?.focus();
+    focusInput();
   };
 
   const existingTaskIds = new Set(todayTasks.map((t) => t.id));
@@ -976,7 +985,7 @@ export default function CombinedPage() {
             {/* Input area with Add and Break Task buttons */}
             <div className={`mt-4 border-t border-zinc-200 pt-4 flex items-start gap-3 rounded-2xl border ${colorPalette.border} bg-white/80 p-3`}>
               <textarea
-                ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+                ref={textareaRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
