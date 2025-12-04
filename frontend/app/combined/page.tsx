@@ -71,7 +71,10 @@ export default function CombinedPage() {
   const [isHydrated, setIsHydrated] = useState(false);
   const [motivationMessage, setMotivationMessage] = useState("");
   const [input, setInput] = useState("");
-  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+  // const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
   const nextTaskId = useRef(1);
   const nextListId = useRef(1);
   const confettiRef = useRef<JSConfetti | null>(null);

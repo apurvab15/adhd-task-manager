@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -10,6 +11,14 @@ import { violetPalette, periwinklePalette, type ColorPalette } from "@/component
 type Mode = "inattentive" | "hyperactive" | "combined";
 
 export default function TasksPage() {
+  return (
+    <Suspense fallback={null}>
+      <TasksPageData />
+    </Suspense>
+  );
+}
+
+export function TasksPageData() {
   const searchParams = useSearchParams();
   const modeParam = searchParams.get("mode");
   const mode: Mode = (modeParam === "inattentive" || modeParam === "hyperactive" || modeParam === "combined") 

@@ -1,5 +1,5 @@
 "use client";
-
+import { Suspense } from "react";
 import { useEffect, useState, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -19,6 +19,13 @@ type Task = {
 };
 
 export default function FocusModePage() {
+  return (
+    <Suspense fallback={null}>
+      <FocusModePageData />
+    </Suspense>
+  );
+}
+export function FocusModePageData() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const modeParam = searchParams.get("mode");
