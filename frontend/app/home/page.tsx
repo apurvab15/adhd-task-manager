@@ -11,8 +11,13 @@ import { violetPalette, skyPalette, orangePalette, type ColorPalette } from "@/c
 
 type Mode = "inattentive" | "hyperactive";
 
-const STORAGE_KEY = "adhd-task-lists";
-const TODAY_TASKS_KEY = "adhd-today-tasks";
+const getStorageKey = (mode: Mode) => {
+  return mode === "inattentive" ? "adhd-task-lists-inattentive" : "adhd-task-lists-hyperactive";
+};
+
+const getTodayTasksKey = (mode: Mode) => {
+  return mode === "inattentive" ? "adhd-today-tasks-inattentive" : "adhd-today-tasks-hyperactive";
+};
 
 const MOTIVATION_MESSAGES = [
   "You're doing great! Keep it up! 💪",
@@ -106,8 +111,9 @@ export default function HomePage() {
     if (typeof window === "undefined") return;
 
     try {
-      // Load today's tasks
-      const saved = window.localStorage.getItem(TODAY_TASKS_KEY);
+      // Load today's tasks (mode-specific)
+      const todayTasksKey = getTodayTasksKey(mode);
+      const saved = window.localStorage.getItem(todayTasksKey);
       if (saved) {
         const parsed = JSON.parse(saved);
         // Check if it's from today
@@ -124,14 +130,15 @@ export default function HomePage() {
           // Reset for new day
           setTodayTasks([]);
           window.localStorage.setItem(
-            TODAY_TASKS_KEY,
+            todayTasksKey,
             JSON.stringify({ date: today, tasks: [] })
           );
         }
       }
 
-      // Load task lists
-      const savedLists = window.localStorage.getItem(STORAGE_KEY);
+      // Load task lists (mode-specific)
+      const storageKey = getStorageKey(mode);
+      const savedLists = window.localStorage.getItem(storageKey);
       if (savedLists) {
         const parsed = JSON.parse(savedLists);
         setTaskLists(parsed || []);
@@ -141,7 +148,7 @@ export default function HomePage() {
     }
 
     setIsHydrated(true);
-  }, []);
+  }, [mode]);
 
   // Listen for task completion events to refresh task lists
   useEffect(() => {
@@ -149,7 +156,8 @@ export default function HomePage() {
 
     const handleTaskUpdate = () => {
       try {
-        const savedLists = window.localStorage.getItem(STORAGE_KEY);
+        const storageKey = getStorageKey(mode);
+        const savedLists = window.localStorage.getItem(storageKey);
         if (savedLists) {
           const parsed = JSON.parse(savedLists);
           setTaskLists(parsed || []);
@@ -167,18 +175,19 @@ export default function HomePage() {
       window.removeEventListener("taskCompleted", handleTaskUpdate);
       window.removeEventListener("storage", handleTaskUpdate);
     };
-  }, []);
+  }, [mode]);
 
-  // Save today's tasks to localStorage
+  // Save today's tasks to localStorage (mode-specific)
   useEffect(() => {
     if (!isHydrated || typeof window === "undefined") return;
 
     const today = new Date().toDateString();
+    const todayTasksKey = getTodayTasksKey(mode);
     window.localStorage.setItem(
-      TODAY_TASKS_KEY,
+      todayTasksKey,
       JSON.stringify({ date: today, tasks: todayTasks })
     );
-  }, [todayTasks, isHydrated]);
+  }, [todayTasks, isHydrated, mode]);
 
   const handleTaskToggle = (taskId: number) => {
     setTodayTasks((tasks) => {

@@ -7,12 +7,15 @@ import TaskListWindow from "@/components/TaskList";
 import FocusModeModal from "@/components/FocusModeModal";
 import { violetPalette, periwinklePalette, type ColorPalette } from "@/components/TaskListDrawer";
 
-type Mode = "inattentive" | "hyperactive";
+type Mode = "inattentive" | "hyperactive" | "combined";
 
 export default function TasksPage() {
   const searchParams = useSearchParams();
   const modeParam = searchParams.get("mode");
-  const mode: Mode = (modeParam === "inattentive" || modeParam === "hyperactive") ? modeParam : "hyperactive";
+  const mode: Mode = (modeParam === "inattentive" || modeParam === "hyperactive" || modeParam === "combined") 
+    ? modeParam 
+    : "hyperactive";
+  // For combined mode, default to hyperactive palette (or you could use a different one)
   const colorPalette: ColorPalette = mode === "inattentive" ? periwinklePalette : violetPalette;
   
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -26,6 +29,7 @@ export default function TasksPage() {
   const getHomeUrl = () => {
     if (mode === "inattentive") return "/inattentive";
     if (mode === "hyperactive") return "/hyperactive";
+    if (mode === "combined") return "/combined";
     return createLink("/home");
   };
 

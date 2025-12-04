@@ -16,13 +16,23 @@ type TaskList = {
     tasks: Task[];
 };
 
-const STORAGE_KEY = "adhd-task-lists";
-
-type Mode = "inattentive" | "hyperactive";
+type Mode = "inattentive" | "hyperactive" | "combined";
 
 type TaskListWindowProps = {
     mode?: Mode;
     colorPalette?: ColorPalette;
+};
+
+const getStorageKey = (mode: Mode) => {
+    if (mode === "inattentive") return "adhd-task-lists-inattentive";
+    if (mode === "hyperactive") return "adhd-task-lists-hyperactive";
+    return "adhd-task-lists-combined";
+};
+
+const getTodayTasksKey = (mode: Mode) => {
+    if (mode === "inattentive") return "adhd-today-tasks-inattentive";
+    if (mode === "hyperactive") return "adhd-today-tasks-hyperactive";
+    return "adhd-today-tasks-combined";
 };
 
 export default function TaskListWindow({ mode = "hyperactive", colorPalette = violetPalette }: TaskListWindowProps) {
@@ -44,7 +54,8 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
         if (typeof window === "undefined") return;
         
         try {
-            const saved = window.localStorage.getItem(STORAGE_KEY);
+            const storageKey = getStorageKey(mode);
+            const saved = window.localStorage.getItem(storageKey);
             if (saved) {
                 const parsed = JSON.parse(saved) as TaskList[];
                 if (parsed.length > 0) {
@@ -57,7 +68,7 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
         }
         
         setIsHydrated(true);
-    }, []);
+    }, [mode]);
 
     // Initialize nextTaskId and nextListId from existing data (only on mount)
     useEffect(() => {
@@ -76,8 +87,9 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
     // Persist to localStorage (only after hydration to avoid overwriting with default state)
     useEffect(() => {
         if (typeof window === "undefined" || !isHydrated) return;
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(taskLists));
-    }, [taskLists, isHydrated]);
+        const storageKey = getStorageKey(mode);
+        window.localStorage.setItem(storageKey, JSON.stringify(taskLists));
+    }, [taskLists, isHydrated, mode]);
 
     // Ensure currentListId is valid
     useEffect(() => {
@@ -142,6 +154,32 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
             if (task && typeof window !== "undefined") {
                 const newDone = !task.done;
 
+                // Sync with today's list if this task exists there
+                try {
+                    const todayTasksKey = getTodayTasksKey(mode);
+                    const savedTodayTasks = window.localStorage.getItem(todayTasksKey);
+                    if (savedTodayTasks) {
+                        const parsed = JSON.parse(savedTodayTasks);
+                        const todayTasks = parsed.tasks || [];
+                        const todayTaskIndex = todayTasks.findIndex((t: { id: number }) => t.id === taskId);
+                        
+                        if (todayTaskIndex !== -1) {
+                            // Task exists in today's list, update it
+                            todayTasks[todayTaskIndex] = { ...todayTasks[todayTaskIndex], done: newDone };
+                            const today = new Date().toDateString();
+                            window.localStorage.setItem(
+                                todayTasksKey,
+                                JSON.stringify({ date: today, tasks: todayTasks })
+                            );
+                            // Dispatch event to notify today's list of the change
+                            window.dispatchEvent(new CustomEvent("todayTasksUpdated"));
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error syncing with today's list:", error);
+                }
+
+                // Handle gamification: award XP when checking, revoke when unchecking
                 if (newDone && !task.done) {
                     // Marking as done – award XP
                     awardXPForTask();
@@ -152,6 +190,8 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
 
                 // Notify listeners that gamification stats changed
                 window.dispatchEvent(new CustomEvent("taskCompleted"));
+                // Also notify that task list was updated (for syncing with today's list)
+                window.dispatchEvent(new CustomEvent("taskListUpdated"));
             }
 
             return lists.map((list) =>

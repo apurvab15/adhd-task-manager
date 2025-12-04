@@ -10,8 +10,8 @@ import BreakTasksModal from "@/components/BreakTasksModal";
 import { periwinklePalette, type ColorPalette } from "@/components/TaskListDrawer";
 import JSConfetti from "js-confetti";
 
-const STORAGE_KEY = "adhd-task-lists";
-const TODAY_TASKS_KEY = "adhd-today-tasks";
+const STORAGE_KEY = "adhd-task-lists-inattentive";
+const TODAY_TASKS_KEY = "adhd-today-tasks-inattentive";
 
 type Task = {
   id: number;

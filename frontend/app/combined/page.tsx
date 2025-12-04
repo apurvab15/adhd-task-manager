@@ -14,7 +14,9 @@ import JSConfetti from "js-confetti";
 const STORAGE_KEY_INATTENTIVE = "adhd-task-lists-inattentive";
 const STORAGE_KEY_HYPERACTIVE = "adhd-task-lists-hyperactive";
 const STORAGE_KEY_COMBINED = "adhd-task-lists-combined";
-const TODAY_TASKS_KEY = "adhd-today-tasks";
+const TODAY_TASKS_KEY_INATTENTIVE = "adhd-today-tasks-inattentive";
+const TODAY_TASKS_KEY_HYPERACTIVE = "adhd-today-tasks-hyperactive";
+const TODAY_TASKS_KEY_COMBINED = "adhd-today-tasks-combined";
 
 const MOTIVATION_MESSAGES = [
   "You're doing great! Keep it up! 💪",
@@ -129,8 +131,13 @@ export default function CombinedPage() {
     if (typeof window === "undefined") return;
 
     try {
-      // Load today's tasks
-      const saved = window.localStorage.getItem(TODAY_TASKS_KEY);
+      // Load today's tasks (mode-specific)
+      const todayTasksKey = mode === "inattentive" 
+        ? TODAY_TASKS_KEY_INATTENTIVE 
+        : mode === "hyperactive" 
+        ? TODAY_TASKS_KEY_HYPERACTIVE 
+        : TODAY_TASKS_KEY_COMBINED;
+      const saved = window.localStorage.getItem(todayTasksKey);
       if (saved) {
         const parsed = JSON.parse(saved);
         const today = new Date().toDateString();
@@ -144,7 +151,7 @@ export default function CombinedPage() {
         } else {
           setTodayTasks([]);
           window.localStorage.setItem(
-            TODAY_TASKS_KEY,
+            todayTasksKey,
             JSON.stringify({ date: today, tasks: [] })
           );
         }
@@ -233,25 +240,92 @@ export default function CombinedPage() {
       }
     };
 
+    const handleTaskListUpdate = () => {
+      // When task manager updates (hyperactive mode only), sync today's tasks if they have sourceListId
+      if (mode === "hyperactive") {
+        try {
+          const storageKey = STORAGE_KEY_HYPERACTIVE;
+          const savedLists = window.localStorage.getItem(storageKey);
+          if (savedLists) {
+            const parsed: TaskList[] = JSON.parse(savedLists);
+            setTaskLists(parsed);
+            
+            // Update today's tasks to match task manager state
+            setTodayTasks((todayTasks) => {
+              return todayTasks.map((todayTask) => {
+                if (todayTask.sourceListId) {
+                  const sourceList = parsed.find((list) => list.id === todayTask.sourceListId);
+                  if (sourceList) {
+                    const sourceTask = sourceList.tasks.find((t) => t.id === todayTask.id);
+                    if (sourceTask && sourceTask.done !== todayTask.done) {
+                      // State changed - sync it (gamification already handled in TaskList)
+                      return { ...todayTask, done: sourceTask.done };
+                    }
+                  }
+                }
+                return todayTask;
+              });
+            });
+          }
+        } catch (error) {
+          console.error("Error syncing with task manager:", error);
+        }
+      }
+    };
+
+    const handleTodayTasksUpdate = () => {
+      // When today's tasks are updated from task manager (hyperactive mode only), refresh from localStorage
+      if (mode === "hyperactive") {
+        try {
+          const todayTasksKey = TODAY_TASKS_KEY_HYPERACTIVE;
+          const saved = window.localStorage.getItem(todayTasksKey);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            const today = new Date().toDateString();
+            if (parsed.date === today) {
+              const tasks = parsed.tasks || [];
+              setTodayTasks(tasks);
+            }
+          }
+        } catch (error) {
+          console.error("Error refreshing today's tasks:", error);
+        }
+      }
+    };
+
     window.addEventListener("taskCompleted", handleTaskUpdate);
+    if (mode === "hyperactive") {
+      window.addEventListener("taskListUpdated", handleTaskListUpdate);
+      window.addEventListener("todayTasksUpdated", handleTodayTasksUpdate);
+    }
+    // Also listen for storage changes
     window.addEventListener("storage", handleTaskUpdate);
 
     return () => {
       window.removeEventListener("taskCompleted", handleTaskUpdate);
+      if (mode === "hyperactive") {
+        window.removeEventListener("taskListUpdated", handleTaskListUpdate);
+        window.removeEventListener("todayTasksUpdated", handleTodayTasksUpdate);
+      }
       window.removeEventListener("storage", handleTaskUpdate);
     };
   }, [mode]);
 
-  // Save today's tasks to localStorage
+  // Save today's tasks to localStorage (mode-specific)
   useEffect(() => {
     if (!isHydrated || typeof window === "undefined") return;
 
     const today = new Date().toDateString();
+    const todayTasksKey = mode === "inattentive" 
+      ? TODAY_TASKS_KEY_INATTENTIVE 
+      : mode === "hyperactive" 
+      ? TODAY_TASKS_KEY_HYPERACTIVE 
+      : TODAY_TASKS_KEY_COMBINED;
     window.localStorage.setItem(
-      TODAY_TASKS_KEY,
+      todayTasksKey,
       JSON.stringify({ date: today, tasks: todayTasks })
     );
-  }, [todayTasks, isHydrated]);
+  }, [todayTasks, isHydrated, mode]);
 
   // Save task lists to localStorage (mode-specific)
   useEffect(() => {
@@ -270,6 +344,36 @@ export default function CombinedPage() {
       if (!task) return tasks;
       
       const newDone = !task.done;
+      
+      // For hyperactive mode: sync with task manager if this task is linked to a task list
+      if (mode === "hyperactive" && task.sourceListId && typeof window !== "undefined") {
+        try {
+          const storageKey = STORAGE_KEY_HYPERACTIVE;
+          const savedLists = window.localStorage.getItem(storageKey);
+          if (savedLists) {
+            const parsed: TaskList[] = JSON.parse(savedLists);
+            const updatedLists = parsed.map((list) => {
+              if (list.id === task.sourceListId) {
+                return {
+                  ...list,
+                  tasks: list.tasks.map((t) =>
+                    t.id === taskId ? { ...t, done: newDone } : t
+                  ),
+                };
+              }
+              return list;
+            });
+            window.localStorage.setItem(storageKey, JSON.stringify(updatedLists));
+            setTaskLists(updatedLists);
+            // Dispatch event to notify task manager of the change
+            window.dispatchEvent(new CustomEvent("taskListUpdated"));
+          }
+        } catch (error) {
+          console.error("Error syncing task with task manager:", error);
+        }
+      }
+      
+      // Handle gamification: award XP when checking, revoke when unchecking
       if (typeof window !== "undefined") {
         if (newDone && !task.done) {
           // Marking as done – award XP
@@ -511,7 +615,7 @@ export default function CombinedPage() {
               </button>
             </div>
             <Link
-              href={`/tasks?mode=${mode}`}
+              href="/tasks?mode=combined"
               className={`${mode === "inattentive" ? "text-lg font-medium text-gray-900" : "rounded-lg px-4 py-2 text-sm font-medium text-zinc-700"} transition-colors ${mode === "inattentive" ? "hover:text-gray-700" : "hover:bg-zinc-100"}`}
             >
               {mode === "inattentive" ? "Tasks" : "Task Manager"}
@@ -741,7 +845,7 @@ export default function CombinedPage() {
               </div>
 
               {/* Stats Cards */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* <div className="grid grid-cols-2 gap-3">
                 <div className={`rounded-xl border ${colorPalette.borderLight} bg-white/80 p-3`}>
                   <p className="text-xs text-zinc-500">Total Tasks</p>
                   <p className={`text-2xl font-bold ${colorPalette.textDark}`}>{stats.tasksCompleted}</p>
@@ -750,7 +854,7 @@ export default function CombinedPage() {
                   <p className="text-xs text-zinc-500">Today</p>
                   <p className="text-2xl font-bold text-rose-900">{stats.tasksCompletedToday}</p>
                 </div>
-              </div>
+              </div> */}
 
               {/* Motivation Message */}
               {motivationMessage && (
@@ -916,7 +1020,7 @@ export default function CombinedPage() {
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-zinc-900">Task List Progress</h2>
                 <Link
-                  href={`/tasks?mode=${mode}`}
+                  href="/tasks?mode=combined"
                   className={`rounded-lg p-1.5 ${colorPalette.text} transition-colors ${colorPalette.accentLight.replace('bg-', 'hover:bg-')}`}
                   title="Go to Task Manager"
                 >

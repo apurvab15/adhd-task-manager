@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useGamification } from "@/hooks/useGamification";
-import { getProgressPercentage, awardXPForTask } from "@/utils/gamification";
+import { getProgressPercentage, awardXPForTask, revokeXPForTaskCompletion } from "@/utils/gamification";
 import { useTaskBreaker } from "@/hooks/useTaseBreaking";
 import FocusModeModal from "@/components/FocusModeModal";
 import AddTasksModal from "@/components/AddTasksModal";
@@ -11,8 +11,8 @@ import BreakTasksModal from "@/components/BreakTasksModal";
 import { violetPalette, type ColorPalette } from "@/components/TaskListDrawer";
 import JSConfetti from "js-confetti";
 
-const STORAGE_KEY = "adhd-task-lists";
-const TODAY_TASKS_KEY = "adhd-today-tasks";
+const STORAGE_KEY = "adhd-task-lists-hyperactive";
+const TODAY_TASKS_KEY = "adhd-today-tasks-hyperactive";
 
 const MOTIVATION_MESSAGES = [
   "You're doing great! Keep it up! 💪",
@@ -186,12 +186,63 @@ export default function HyperactivePage() {
       }
     };
 
+    const handleTaskListUpdate = () => {
+      // When task manager updates, sync today's tasks if they have sourceListId
+      try {
+        const savedLists = window.localStorage.getItem(STORAGE_KEY);
+        if (savedLists) {
+          const parsed: TaskList[] = JSON.parse(savedLists);
+          setTaskLists(parsed);
+          
+          // Update today's tasks to match task manager state
+          setTodayTasks((todayTasks) => {
+            return todayTasks.map((todayTask) => {
+              if (todayTask.sourceListId) {
+                const sourceList = parsed.find((list) => list.id === todayTask.sourceListId);
+                if (sourceList) {
+                  const sourceTask = sourceList.tasks.find((t) => t.id === todayTask.id);
+                  if (sourceTask && sourceTask.done !== todayTask.done) {
+                    // State changed - sync it (gamification already handled in TaskList)
+                    return { ...todayTask, done: sourceTask.done };
+                  }
+                }
+              }
+              return todayTask;
+            });
+          });
+        }
+      } catch (error) {
+        console.error("Error syncing with task manager:", error);
+      }
+    };
+
+    const handleTodayTasksUpdate = () => {
+      // When today's tasks are updated from task manager, refresh from localStorage
+      try {
+        const saved = window.localStorage.getItem(TODAY_TASKS_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          const today = new Date().toDateString();
+          if (parsed.date === today) {
+            const tasks = parsed.tasks || [];
+            setTodayTasks(tasks);
+          }
+        }
+      } catch (error) {
+        console.error("Error refreshing today's tasks:", error);
+      }
+    };
+
     window.addEventListener("taskCompleted", handleTaskUpdate);
+    window.addEventListener("taskListUpdated", handleTaskListUpdate);
+    window.addEventListener("todayTasksUpdated", handleTodayTasksUpdate);
     // Also listen for storage changes
     window.addEventListener("storage", handleTaskUpdate);
 
     return () => {
       window.removeEventListener("taskCompleted", handleTaskUpdate);
+      window.removeEventListener("taskListUpdated", handleTaskListUpdate);
+      window.removeEventListener("todayTasksUpdated", handleTodayTasksUpdate);
       window.removeEventListener("storage", handleTaskUpdate);
     };
   }, []);
@@ -219,9 +270,44 @@ export default function HyperactivePage() {
       if (!task) return tasks;
       
       const newDone = !task.done;
-      // Award XP only when marking as done (not when unchecking) and only once
-      if (newDone && !task.done && typeof window !== "undefined") {
-        awardXPForTask();
+      
+      // Sync with task manager if this task is linked to a task list
+      if (task.sourceListId && typeof window !== "undefined") {
+        try {
+          const savedLists = window.localStorage.getItem(STORAGE_KEY);
+          if (savedLists) {
+            const parsed: TaskList[] = JSON.parse(savedLists);
+            const updatedLists = parsed.map((list) => {
+              if (list.id === task.sourceListId) {
+                return {
+                  ...list,
+                  tasks: list.tasks.map((t) =>
+                    t.id === taskId ? { ...t, done: newDone } : t
+                  ),
+                };
+              }
+              return list;
+            });
+            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedLists));
+            setTaskLists(updatedLists);
+            // Dispatch event to notify task manager of the change
+            window.dispatchEvent(new CustomEvent("taskListUpdated"));
+          }
+        } catch (error) {
+          console.error("Error syncing task with task manager:", error);
+        }
+      }
+      
+      // Handle gamification: award XP when checking, revoke when unchecking
+      if (typeof window !== "undefined") {
+        if (newDone && !task.done) {
+          // Marking as done – award XP
+          awardXPForTask();
+        } else if (!newDone && task.done) {
+          // Unchecking a completed task – revoke XP
+          revokeXPForTaskCompletion();
+        }
+        // Notify listeners that gamification stats changed
         window.dispatchEvent(new CustomEvent("taskCompleted"));
       }
       
@@ -486,7 +572,7 @@ export default function HyperactivePage() {
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* <div className="grid grid-cols-2 gap-3">
               <div className={`rounded-xl border ${colorPalette.borderLight} bg-white/80 p-3`}>
                 <p className="text-xs text-zinc-500">Total Tasks</p>
                 <p className={`text-2xl font-bold ${colorPalette.textDark}`}>{stats.tasksCompleted}</p>
@@ -495,7 +581,7 @@ export default function HyperactivePage() {
                 <p className="text-xs text-zinc-500">Today</p>
                 <p className="text-2xl font-bold text-rose-900">{stats.tasksCompletedToday}</p>
               </div>
-            </div>
+            </div> */}
 
             {/* Motivation Message */}
             {motivationMessage && (

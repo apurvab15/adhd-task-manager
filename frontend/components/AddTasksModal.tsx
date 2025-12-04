@@ -3,8 +3,6 @@
 import { useState, useEffect } from "react";
 import { violetPalette, skyPalette, periwinklePalette, type ColorPalette } from "./TaskListDrawer";
 
-const STORAGE_KEY = "adhd-task-lists";
-
 type Task = {
   id: number;
   text: string;
@@ -25,6 +23,10 @@ type AddTasksModalProps = {
   mode?: "inattentive" | "hyperactive";
 };
 
+const getStorageKey = (mode: "inattentive" | "hyperactive") => {
+  return mode === "inattentive" ? "adhd-task-lists-inattentive" : "adhd-task-lists-hyperactive";
+};
+
 export default function AddTasksModal({ isOpen, onClose, onAddTasks, existingTaskIds, mode = "hyperactive" }: AddTasksModalProps) {
   const colorPalette: ColorPalette = mode === "inattentive" ? periwinklePalette : violetPalette;
   const [allTasks, setAllTasks] = useState<Array<{ task: Task; listName: string; listId: number }>>([]);
@@ -35,7 +37,8 @@ export default function AddTasksModal({ isOpen, onClose, onAddTasks, existingTas
     if (!isOpen || typeof window === "undefined") return;
 
     try {
-      const saved = window.localStorage.getItem(STORAGE_KEY);
+      const storageKey = getStorageKey(mode);
+      const saved = window.localStorage.getItem(storageKey);
       if (saved) {
         const taskLists: TaskList[] = JSON.parse(saved);
         const untickedTasks: Array<{ task: Task; listName: string; listId: number }> = [];
@@ -59,7 +62,7 @@ export default function AddTasksModal({ isOpen, onClose, onAddTasks, existingTas
       console.error("Error loading tasks:", error);
       setAllTasks([]);
     }
-  }, [isOpen, existingTaskIds]);
+  }, [isOpen, existingTaskIds, mode]);
 
   const handleTaskToggle = (taskId: number) => {
     setSelectedTaskIds((prev) => {

@@ -22,7 +22,10 @@ type FocusModeModalProps = {
   mode?: "inattentive" | "hyperactive";
 };
 
-const STORAGE_KEY = "adhd-task-lists";
+const getStorageKey = (mode: "inattentive" | "hyperactive") => {
+  return mode === "inattentive" ? "adhd-task-lists-inattentive" : "adhd-task-lists-hyperactive";
+};
+
 const FOCUS_MODE_STORAGE_KEY = "adhd-focus-mode-tasks";
 const FOCUS_MODE_TIMER_KEY = "adhd-focus-mode-timer";
 
@@ -38,7 +41,8 @@ export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }
     if (!isOpen || typeof window === "undefined") return;
 
     try {
-      const saved = window.localStorage.getItem(STORAGE_KEY);
+      const storageKey = getStorageKey(mode);
+      const saved = window.localStorage.getItem(storageKey);
       if (saved) {
         const taskLists: TaskList[] = JSON.parse(saved);
         const untickedTasks: Array<{ task: Task; listName: string }> = [];
@@ -56,7 +60,7 @@ export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }
     } catch (error) {
       console.error("Error loading tasks:", error);
     }
-  }, [isOpen]);
+  }, [isOpen, mode]);
 
   const handleTaskToggle = (taskId: number) => {
     setSelectedTaskIds((prev) => {
