@@ -3,13 +3,17 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useGamification } from "@/hooks/useGamification";
+import { useTaskBreaker } from "@/hooks/useTaseBreaking";
 import { getProgressPercentage, awardXPForTask, revokeXPForTaskCompletion, penalizeXPForUncompletedTask } from "@/utils/gamification";
 import FocusModeModal from "@/components/FocusModeModal";
 import AddTasksModal from "@/components/AddTasksModal";
+import BreakTasksModal from "@/components/BreakTasksModal";
 import { violetPalette, periwinklePalette, type ColorPalette } from "@/components/TaskListDrawer";
 import JSConfetti from "js-confetti";
 
-const STORAGE_KEY = "adhd-task-lists";
+const STORAGE_KEY_INATTENTIVE = "adhd-task-lists-inattentive";
+const STORAGE_KEY_HYPERACTIVE = "adhd-task-lists-hyperactive";
+const STORAGE_KEY_COMBINED = "adhd-task-lists-combined";
 const TODAY_TASKS_KEY = "adhd-today-tasks";
 
 const MOTIVATION_MESSAGES = [
@@ -57,6 +61,9 @@ export default function CombinedPage() {
   const progressPercentage = getProgressPercentage(stats);
   const [isFocusModalOpen, setIsFocusModalOpen] = useState(false);
   const [isAddTasksModalOpen, setIsAddTasksModalOpen] = useState(false);
+  const [isBreakTasksModalOpen, setIsBreakTasksModalOpen] = useState(false);
+  const [brokenTasks, setBrokenTasks] = useState<string[]>([]);
+  const [originalTaskText, setOriginalTaskText] = useState<string>("");
   const [todayTasks, setTodayTasks] = useState<Task[]>([]);
   const [taskLists, setTaskLists] = useState<TaskList[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
@@ -64,18 +71,33 @@ export default function CombinedPage() {
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const nextTaskId = useRef(1);
+  const nextListId = useRef(1);
   const confettiRef = useRef<JSConfetti | null>(null);
   const hasTriggeredConfettiRef = useRef(false);
+  const hasTriggeredLevelUpConfettiRef = useRef(false);
+  const previousLevelRef = useRef(stats.level);
+  const isInitialMountRef = useRef(true);
+  const { breakTask, isBreaking, error } = useTaskBreaker("combined");
 
   // Use periwinkle palette for inattentive, violet for hyperactive
   const colorPalette: ColorPalette = mode === "inattentive" ? periwinklePalette : violetPalette;
 
-  // Initialize confetti (for inattentive mode)
+  // Initialize confetti
   useEffect(() => {
-    if (typeof window !== "undefined" && mode === "inattentive") {
+    if (typeof window !== "undefined") {
       confettiRef.current = new JSConfetti();
     }
-  }, [mode]);
+  }, []);
+
+  // Sync previousLevelRef after stats are loaded and mark initial mount as complete
+  useEffect(() => {
+    previousLevelRef.current = stats.level;
+    // Mark initial mount as complete after a brief delay to ensure stats are loaded
+    const timer = setTimeout(() => {
+      isInitialMountRef.current = false;
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   const getRandomMessage = () => {
     const randomIndex = Math.floor(Math.random() * MOTIVATION_MESSAGES.length);
@@ -128,18 +150,67 @@ export default function CombinedPage() {
         }
       }
 
-      // Load task lists
-      const savedLists = window.localStorage.getItem(STORAGE_KEY);
+      // Load task lists based on current mode
+      const storageKey = mode === "inattentive" 
+        ? STORAGE_KEY_INATTENTIVE 
+        : mode === "hyperactive" 
+        ? STORAGE_KEY_HYPERACTIVE 
+        : STORAGE_KEY_COMBINED;
+      const savedLists = window.localStorage.getItem(storageKey);
       if (savedLists) {
         const parsed = JSON.parse(savedLists);
         setTaskLists(parsed || []);
+        
+        // Initialize nextListId from existing lists
+        if (parsed && parsed.length > 0) {
+          const maxListId = Math.max(...parsed.map((list: TaskList) => list.id));
+          nextListId.current = maxListId + 1;
+          const allTasks = parsed.flatMap((list: TaskList) => list.tasks);
+          if (allTasks.length > 0) {
+            const maxTaskId = Math.max(...allTasks.map((t: { id: number }) => t.id));
+            nextTaskId.current = Math.max(nextTaskId.current, maxTaskId + 1);
+          }
+        }
       }
     } catch (error) {
       console.error("Error loading data:", error);
     }
 
     setIsHydrated(true);
-  }, []);
+  }, [mode]);
+
+  // Reload task lists when mode changes
+  useEffect(() => {
+    if (!isHydrated || typeof window === "undefined") return;
+
+    try {
+      const storageKey = mode === "inattentive" 
+        ? STORAGE_KEY_INATTENTIVE 
+        : mode === "hyperactive" 
+        ? STORAGE_KEY_HYPERACTIVE 
+        : STORAGE_KEY_COMBINED;
+      const savedLists = window.localStorage.getItem(storageKey);
+      if (savedLists) {
+        const parsed = JSON.parse(savedLists);
+        setTaskLists(parsed || []);
+        
+        // Initialize nextListId from existing lists
+        if (parsed && parsed.length > 0) {
+          const maxListId = Math.max(...parsed.map((list: TaskList) => list.id));
+          nextListId.current = maxListId + 1;
+          const allTasks = parsed.flatMap((list: TaskList) => list.tasks);
+          if (allTasks.length > 0) {
+            const maxTaskId = Math.max(...allTasks.map((t: { id: number }) => t.id));
+            nextTaskId.current = Math.max(nextTaskId.current, maxTaskId + 1);
+          }
+        }
+      } else {
+        setTaskLists([]);
+      }
+    } catch (error) {
+      console.error("Error loading task lists for mode:", error);
+    }
+  }, [mode, isHydrated]);
 
   // Listen for task completion events to refresh task lists
   useEffect(() => {
@@ -147,7 +218,12 @@ export default function CombinedPage() {
 
     const handleTaskUpdate = () => {
       try {
-        const savedLists = window.localStorage.getItem(STORAGE_KEY);
+        const storageKey = mode === "inattentive" 
+          ? STORAGE_KEY_INATTENTIVE 
+          : mode === "hyperactive" 
+          ? STORAGE_KEY_HYPERACTIVE 
+          : STORAGE_KEY_COMBINED;
+        const savedLists = window.localStorage.getItem(storageKey);
         if (savedLists) {
           const parsed = JSON.parse(savedLists);
           setTaskLists(parsed || []);
@@ -164,7 +240,7 @@ export default function CombinedPage() {
       window.removeEventListener("taskCompleted", handleTaskUpdate);
       window.removeEventListener("storage", handleTaskUpdate);
     };
-  }, []);
+  }, [mode]);
 
   // Save today's tasks to localStorage
   useEffect(() => {
@@ -176,6 +252,17 @@ export default function CombinedPage() {
       JSON.stringify({ date: today, tasks: todayTasks })
     );
   }, [todayTasks, isHydrated]);
+
+  // Save task lists to localStorage (mode-specific)
+  useEffect(() => {
+    if (!isHydrated || typeof window === "undefined") return;
+    const storageKey = mode === "inattentive" 
+      ? STORAGE_KEY_INATTENTIVE 
+      : mode === "hyperactive" 
+      ? STORAGE_KEY_HYPERACTIVE 
+      : STORAGE_KEY_COMBINED;
+    window.localStorage.setItem(storageKey, JSON.stringify(taskLists));
+  }, [taskLists, isHydrated, mode]);
 
   const handleTaskToggle = (taskId: number) => {
     setTodayTasks((tasks) => {
@@ -234,22 +321,92 @@ export default function CombinedPage() {
     inputRef.current?.focus();
   };
 
-  const breakTaskAtCaret = () => {
-    const el = inputRef.current;
-    if (!el) return;
-    const value = el.value;
-    const pos = el.selectionStart ?? value.length;
-    if (!value.trim()) return;
-    const left = value.slice(0, pos).trim();
-    const right = value.slice(pos).trim();
-    const newTasks: Task[] = [];
-    if (left) newTasks.push({ id: nextTaskId.current++, text: left, done: false });
-    if (right) newTasks.push({ id: nextTaskId.current++, text: right, done: false });
-    if (newTasks.length > 0) {
-      setTodayTasks((prev) => [...prev, ...newTasks]);
+  const handleBreakTasks = async (text: string) => {
+    const taskText = text.trim();
+    if (!taskText) return;
+    
+    setOriginalTaskText(taskText);
+    setIsBreakTasksModalOpen(true);
+    
+    try {
+      const subTasks = await breakTask(taskText, "combined");
+      console.log("combined page: subTasks", subTasks);
+      if (subTasks && subTasks.length === 0) {
+        setIsBreakTasksModalOpen(false);
+        alert("No sub-tasks were generated. Please try again.");
+        return;
+      }
+      setBrokenTasks(subTasks || []);
+    } catch (error) {
+      console.error("Error breaking down task:", error);
+      setIsBreakTasksModalOpen(false);
+      alert(error instanceof Error ? error.message : "Failed to break down task. Please try again.");
     }
+  };
+
+  const handleDiscardBrokenTasks = () => {
+    setBrokenTasks([]);
+    setOriginalTaskText("");
+    setIsBreakTasksModalOpen(false);
     setInput("");
-    el.focus();
+    inputRef.current?.focus();
+  };
+
+  const handleAddBrokenTasks = (brokenTasksList: Array<{ id: number; text: string }>) => {
+    if (brokenTasksList.length === 0) return;
+
+    const validTasks = brokenTasksList.filter((t) => t.text.trim() !== "");
+    if (validTasks.length === 0) return;
+
+    // Generate unique IDs for tasks
+    const tasksWithIds = validTasks.map((task) => ({
+      id: nextTaskId.current++,
+      text: task.text.trim(),
+      done: false,
+    }));
+
+    // Create a new task list with the broken tasks
+    const newListName = originalTaskText.slice(0, 30) + (originalTaskText.length > 30 ? "..." : "");
+    const newList: TaskList = {
+      id: nextListId.current++,
+      name: newListName,
+      tasks: tasksWithIds.map((task) => ({
+        id: task.id,
+        text: task.text,
+        done: false,
+      })),
+    };
+
+    // Add the new list to task lists
+    setTaskLists((prev) => [...prev, newList]);
+
+    // Add tasks to today's tasks
+    const todayTasksWithIds: Task[] = tasksWithIds.map((task) => ({
+      ...task,
+      sourceListId: newList.id,
+      sourceListName: newList.name,
+    }));
+
+    setTodayTasks((prev) => {
+      // Filter out duplicates based on text content
+      const existingTexts = new Set(prev.map((t) => t.text.toLowerCase().trim()));
+      const newTasks = todayTasksWithIds.filter(
+        (t) => !existingTexts.has(t.text.toLowerCase().trim())
+      );
+      // Add to beginning for inattentive mode, end for hyperactive mode
+      if (mode === "inattentive") {
+        return [...newTasks, ...prev];
+      } else {
+        return [...prev, ...newTasks];
+      }
+    });
+
+    // Clean up
+    setBrokenTasks([]);
+    setOriginalTaskText("");
+    setIsBreakTasksModalOpen(false);
+    setInput("");
+    inputRef.current?.focus();
   };
 
   const existingTaskIds = new Set(todayTasks.map((t) => t.id));
@@ -279,9 +436,9 @@ export default function CombinedPage() {
   // Get the next incomplete task (for inattentive mode)
   const nextTask = todayTasks.find((t) => !t.done);
 
-  // Trigger confetti when all tasks are completed (for inattentive mode)
+  // Trigger confetti when all tasks are completed (for both modes)
   useEffect(() => {
-    if (mode === "inattentive" && allTasksCompleted && confettiRef.current && !hasTriggeredConfettiRef.current) {
+    if (allTasksCompleted && confettiRef.current && !hasTriggeredConfettiRef.current) {
       hasTriggeredConfettiRef.current = true;
       confettiRef.current.addConfetti({
         emojis: ["🎉", "✨", "🌟", "💫", "🎊"],
@@ -289,9 +446,24 @@ export default function CombinedPage() {
         confettiNumber: 50,
       });
     } else if (!allTasksCompleted) {
+      // Reset the flag when tasks become incomplete again
       hasTriggeredConfettiRef.current = false;
     }
-  }, [allTasksCompleted, mode]);
+  }, [allTasksCompleted]);
+
+  // Trigger confetti when leveling up (skip on initial mount)
+  useEffect(() => {
+    if (isInitialMountRef.current) return;
+    
+    if (stats.level > previousLevelRef.current && confettiRef.current) {
+      previousLevelRef.current = stats.level;
+      confettiRef.current.addConfetti({
+        emojis: ["🏆", "⭐", "🎉", "🌟", "✨", "💎"],
+        emojiSize: 100,
+        confettiNumber: 60,
+      });
+    }
+  }, [stats.level]);
 
   return (
     <div className={`min-h-screen ${mode === "inattentive" ? "bg-white" : "bg-gradient-to-br from-rose-50 via-white to-slate-100"}`}>
@@ -506,6 +678,16 @@ export default function CombinedPage() {
               >
                 Add
               </button>
+              <button
+                onClick={() => handleBreakTasks(input)} 
+                disabled={isBreaking}
+                title={isBreaking ? "Breaking down task..." : "Break down task using AI"}
+                className={`text-base font-medium border-2 border-[#7085FF] text-[#7085FF] px-4 py-2 rounded-lg transition-colors hover:bg-[#7085FF]/10 disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-5">
+                  <path d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684ZM13.949 13.684a1 1 0 0 0-1.898 0l-.184.551a1 1 0 0 1-.632.633l-.551.183a1 1 0 0 0 0 1.898l.551.183a1 1 0 0 1 .633.633l.183.551a1 1 0 0 0 1.898 0l.184-.551a1 1 0 0 1 .632-.633l.551-.183a1 1 0 0 0 0-1.898l-.551-.184a1 1 0 0 1-.633-.632l-.183-.551Z" />
+                </svg>
+              </button>
             </div>
           </div>
         </main>
@@ -602,88 +784,8 @@ export default function CombinedPage() {
             </div>
           </div>
 
-          {/* Middle Column - Task List Progress */}
-          <div className="flex-1 rounded-2xl border border-black/5 bg-white/90 p-6 shadow-lg shadow-black/5 flex flex-col overflow-y-auto">
-            <div className="mb-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-zinc-900">Task List Progress</h2>
-                <Link
-                  href={`/tasks?mode=${mode}`}
-                  className={`rounded-lg p-1.5 ${colorPalette.text} transition-colors ${colorPalette.accentLight.replace('bg-', 'hover:bg-')}`}
-                  title="Go to Task Manager"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                    className="h-4 w-4"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M3 4.25A2.25 2.25 0 0 1 5.25 2h5.5A2.25 2.25 0 0 1 13 4.25v2a.75.75 0 0 1-1.5 0v-2a.75.75 0 0 0-.75-.75h-5.5a.75.75 0 0 0-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 0 0 .75-.75v-2a.75.75 0 0 1 1.5 0v2A2.25 2.25 0 0 1 10.75 18h-5.5A2.25 2.25 0 0 1 3 15.75V4.25Z"
-                      clipRule="evenodd"
-                    />
-                    <path
-                      fillRule="evenodd"
-                      d="M19 10a.75.75 0 0 0-.75-.75H8.704l1.048-.943a.75.75 0 1 0-1.004-1.114l-2.5 2.25a.75.75 0 0 0 0 1.114l2.5 2.25a.75.75 0 1 0 1.004-1.114l-1.048-.943h9.546A.75.75 0 0 0 19 10Z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </Link>
-              </div>
-              <p className="mt-1 text-xs text-zinc-600">
-                Completion rate by list
-              </p>
-            </div>
-
-            <div className="space-y-4 flex-1">
-              {listProgress.length === 0 ? (
-                <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-zinc-200 bg-zinc-50 p-8 text-center">
-                  <p className="text-sm text-zinc-500">
-                    No task lists yet. Create one in Task Manager!
-                  </p>
-                </div>
-              ) : (
-                listProgress.map((list, index) => (
-                  <div key={index} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-zinc-900 truncate">{list.name}</p>
-                      <span className="text-xs text-zinc-600 ml-2">
-                        {list.completed}/{list.total}
-                      </span>
-                    </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-200">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-orange-400 to-rose-500 transition-all duration-500"
-                        style={{ width: `${list.rate}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-zinc-500">{Math.round(list.rate)}% complete</p>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* Today's Progress Summary */}
-            <div className={`mt-6 rounded-xl border ${colorPalette.borderLight} ${colorPalette.accentLight}/50 p-4`}>
-              <p className={`text-xs font-semibold ${colorPalette.textDark} mb-2`}>Today&apos;s Progress</p>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs text-zinc-600">
-                  <span>Today&apos;s Tasks</span>
-                  <span>{completedToday}/{totalToday}</span>
-                </div>
-                <div className={`h-2 w-full overflow-hidden rounded-full ${colorPalette.borderLight.replace('border-', 'bg-')}`}>
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-violet-500 to-rose-500 transition-all duration-500"
-                    style={{ width: `${totalToday > 0 ? (completedToday / totalToday) * 100 : 0}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column - Today's Task List */}
-          <div className="flex-1 rounded-2xl border border-black/5 bg-white/90 p-6 shadow-lg shadow-black/5 flex flex-col">
+          {/* Middle Column - Today's Task List */}
+          <div className="flex-[2] rounded-2xl border border-black/5 bg-white/90 p-6 shadow-lg shadow-black/5 flex flex-col">
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-xl font-semibold text-zinc-900">Today&apos;s Tasks</h2>
@@ -770,6 +872,15 @@ export default function CombinedPage() {
                 ref={inputRef as React.RefObject<HTMLTextAreaElement>}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    addTask(input);
+                  } else if (e.key === "Enter" && e.shiftKey) {
+                    e.preventDefault();
+                    handleBreakTasks(input);
+                  }
+                }}
                 rows={2}
                 placeholder="Type a task... (Enter = add, Shift+Enter = break)"
                 className={`flex-1 resize-none rounded-2xl border ${colorPalette.border} bg-white/80 p-3 text-sm ${colorPalette.text} ${colorPalette.borderLight.replace('border-', 'focus:border-')} focus:outline-none`}
@@ -786,14 +897,95 @@ export default function CombinedPage() {
                 </button>
 
                 <button
-                  onClick={breakTaskAtCaret}
-                  className={`rounded-2xl border ${colorPalette.borderLight} px-4 py-2 text-sm font-semibold ${colorPalette.text} transition ${colorPalette.accentLight.replace('bg-', 'hover:bg-')}`}
-                  title="Split the current input at the cursor into two tasks"
+                  onClick={() => handleBreakTasks(input)}
+                  disabled={isBreaking}
+                  className={`rounded-2xl border ${colorPalette.borderLight} px-4 py-2 text-sm font-semibold ${colorPalette.text} transition ${colorPalette.accentLight.replace('bg-', 'hover:bg-')} disabled:opacity-50 disabled:cursor-not-allowed`}
+                  title={isBreaking ? "Breaking down task..." : "Break down task using AI"}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-5">
                     <path d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684ZM13.949 13.684a1 1 0 0 0-1.898 0l-.184.551a1 1 0 0 1-.632.633l-.551.183a1 1 0 0 0 0 1.898l.551.183a1 1 0 0 1 .633.633l.183.551a1 1 0 0 0 1.898 0l.184-.551a1 1 0 0 1 .632-.633l.551-.183a1 1 0 0 0 0-1.898l-.551-.184a1 1 0 0 1-.633-.632l-.183-.551Z" />
                   </svg>
                 </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Task List Progress */}
+          <div className="flex-1 rounded-2xl border border-black/5 bg-white/90 p-6 shadow-lg shadow-black/5 flex flex-col overflow-y-auto">
+            <div className="mb-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-zinc-900">Task List Progress</h2>
+                <Link
+                  href={`/tasks?mode=${mode}`}
+                  className={`rounded-lg p-1.5 ${colorPalette.text} transition-colors ${colorPalette.accentLight.replace('bg-', 'hover:bg-')}`}
+                  title="Go to Task Manager"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    className="h-4 w-4"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M3 4.25A2.25 2.25 0 0 1 5.25 2h5.5A2.25 2.25 0 0 1 13 4.25v2a.75.75 0 0 1-1.5 0v-2a.75.75 0 0 0-.75-.75h-5.5a.75.75 0 0 0-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 0 0 .75-.75v-2a.75.75 0 0 1 1.5 0v2A2.25 2.25 0 0 1 10.75 18h-5.5A2.25 2.25 0 0 1 3 15.75V4.25Z"
+                      clipRule="evenodd"
+                    />
+                    <path
+                      fillRule="evenodd"
+                      d="M19 10a.75.75 0 0 0-.75-.75H8.704l1.048-.943a.75.75 0 1 0-1.004-1.114l-2.5 2.25a.75.75 0 0 0 0 1.114l2.5 2.25a.75.75 0 1 0 1.004-1.114l-1.048-.943h9.546A.75.75 0 0 0 19 10Z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </Link>
+              </div>
+              <p className="mt-1 text-xs text-zinc-600">
+                Completion rate by list
+              </p>
+            </div>
+
+            <div className="space-y-4 flex-1">
+              {listProgress.length === 0 ? (
+                <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-zinc-200 bg-zinc-50 p-8 text-center">
+                  <p className="text-sm text-zinc-500">
+                    No task lists yet. Create one in Task Manager!
+                  </p>
+                </div>
+              ) : (
+                listProgress.map((list, index) => (
+                  <div key={index} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-zinc-900 truncate">{list.name}</p>
+                      <span className="text-xs text-zinc-600 ml-2">
+                        {list.completed}/{list.total}
+                      </span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-200">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-orange-400 to-rose-500 transition-all duration-500"
+                        style={{ width: `${list.rate}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-zinc-500">{Math.round(list.rate)}% complete</p>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Today's Progress Summary */}
+            <div className={`mt-6 rounded-xl border ${colorPalette.borderLight} ${colorPalette.accentLight}/50 p-4`}>
+              <p className={`text-xs font-semibold ${colorPalette.textDark} mb-2`}>Today&apos;s Progress</p>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs text-zinc-600">
+                  <span>Today&apos;s Tasks</span>
+                  <span>{completedToday}/{totalToday}</span>
+                </div>
+                <div className={`h-2 w-full overflow-hidden rounded-full ${colorPalette.borderLight.replace('border-', 'bg-')}`}>
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-violet-500 to-rose-500 transition-all duration-500"
+                    style={{ width: `${totalToday > 0 ? (completedToday / totalToday) * 100 : 0}%` }}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -808,6 +1000,20 @@ export default function CombinedPage() {
         existingTaskIds={existingTaskIds}
         mode={mode}
         key={isAddTasksModalOpen ? "open" : "closed"}
+      />
+      <BreakTasksModal
+        isOpen={isBreakTasksModalOpen}
+        isLoading={isBreaking}
+        tasks={brokenTasks}
+        originalTask={originalTaskText}
+        onClose={() => {
+          if (!isBreaking) {
+            handleDiscardBrokenTasks();
+          }
+        }}
+        onDiscard={handleDiscardBrokenTasks}
+        onAdd={handleAddBrokenTasks}
+        colorPalette={colorPalette}
       />
     </div>
   );
