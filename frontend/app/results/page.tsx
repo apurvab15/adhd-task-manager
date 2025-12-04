@@ -44,11 +44,14 @@ export default function ResultsPage() {
           const contentType = response.headers.get("content-type");
           if (contentType && contentType.includes("application/json")) {
             const errorData = await response.json();
-            throw new Error(errorData.error || `Failed to classify ADHD type (${response.status})`);
+            const errorMessage = errorData.details 
+              ? `${errorData.error}: ${errorData.details}` 
+              : errorData.error || `Failed to classify ADHD type (${response.status})`;
+            throw new Error(errorMessage);
           } else {
             // Response is HTML or text, not JSON
             const errorText = await response.text();
-            throw new Error(`Server error: ${response.status} ${response.statusText}`);
+            throw new Error(`Server error: ${response.status} ${response.statusText}. ${errorText.substring(0, 200)}`);
           }
         }
 

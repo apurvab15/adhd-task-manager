@@ -90,22 +90,28 @@ function mapFormDataToNotebookFormat(formData: Record<string, string>): Record<s
 
 export async function POST(req: NextRequest) {
   try {
+    console.log("req", req);
     const formData = await req.json();
+    console.log("formData", formData);
 
     if (!formData || Object.keys(formData).length === 0) {
       return NextResponse.json(
         { error: "No form data provided" },
         { status: 400 }
       );
+    } else {
+      console.log("formData is not empty");
     }
 
-    const googleAPIKey = "AIzaSyBt744MGot6AhsB42gR_t2_ZjnPoNMAyLk";
+    const googleAPIKey = process.env.GOOGLE_API_KEY;
 
     if (!googleAPIKey || googleAPIKey.trim() === "") {
       return NextResponse.json(
         { error: "Google API key is not set" },
         { status: 500 }
       );
+    } else {
+      console.log("googleAPIKey is set");
     }
 
     // Map form data to notebook format
@@ -139,6 +145,8 @@ export async function POST(req: NextRequest) {
 
     // Initialize Google Gemini
     const genAI = new GoogleGenerativeAI(googleAPIKey);
+    // Use gemini-pro (stable) or gemini-1.5-flash (faster). 
+    // gemini-1.5-pro requires v1 API, not v1beta
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
 
     // Build prompt (same structure as Python notebook)
@@ -222,8 +230,14 @@ Classification rules:
     });
   } catch (error) {
     console.error("Error in classify API route:", error);
+    console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace");
+    console.error("Error details:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
     return NextResponse.json(
-      { error: "Internal server error", details: error instanceof Error ? error.message : "Unknown error" },
+      { 
+        error: "Internal server error", 
+        details: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined
+      },
       { status: 500 }
     );
   }
