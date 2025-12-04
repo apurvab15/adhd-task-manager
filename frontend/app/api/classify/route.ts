@@ -1,6 +1,93 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 
+// Frequency mapping (same as Python notebook)
+const FREQ_MAP: Record<string, number> = {
+  "Never": 1,
+  "Rarely": 2,
+  "Sometimes": 3,
+  "Often": 4,
+  "Very Often": 5,
+};
+
+// Map form field values to Python notebook format
+function normalizeFrequency(value: string): string {
+  const mapping: Record<string, string> = {
+    "never": "Never",
+    "rarely": "Rarely",
+    "sometimes": "Sometimes",
+    "often": "Often",
+    "very-often": "Very Often",
+  };
+  return mapping[value.toLowerCase()] || value;
+}
+
+function scoreFreq(value: string): number {
+  const normalized = normalizeFrequency(value);
+  return FREQ_MAP[normalized] || 0;
+}
+
+// Map form fields to Python notebook field names
+function mapFormDataToNotebookFormat(formData: Record<string, string>): Record<string, any> {
+  const mapped: Record<string, any> = {
+    age: formData.age || "",
+    attention_focus_loss: normalizeFrequency(formData.q1 || ""),
+    unfinished_tasks: normalizeFrequency(formData.q2 || ""),
+    disorganization: normalizeFrequency(formData.q3 || ""),
+    avoid_long_focus: normalizeFrequency(formData.q4 || ""),
+    losing_items: normalizeFrequency(formData.q5 || ""),
+    restlessness: normalizeFrequency(formData.q6 || ""),
+    interrupting: normalizeFrequency(formData.q7 || ""),
+    task_switching: normalizeFrequency(formData.q8 || ""),
+    time_blindness: normalizeFrequency(formData.q9 || ""),
+    forgetting_deadlines: normalizeFrequency(formData.q11 || ""),
+  };
+
+  // Map work environment
+  const workEnvMap: Record<string, string> = {
+    "structured": "Structured",
+    "interruptions": "Interruptions",
+    "fast-paced": "Fast-paced",
+    "remote": "Remote",
+    "unstructured": "Unstructured",
+  };
+  mapped.work_environment = workEnvMap[formData.q12?.toLowerCase()] || formData.q12 || "";
+
+  // Map social support (convert to number scale 1-5)
+  const supportMap: Record<string, number> = {
+    "not-at-all": 1,
+    "slightly": 2,
+    "moderately": 3,
+    "very": 4,
+    "extremely": 5,
+  };
+  mapped.social_support = supportMap[formData.q13?.toLowerCase()] || 3;
+
+  // Map preferred focus environment
+  const focusEnvMap: Record<string, string> = {
+    "quiet": "Quiet",
+    "background-music": "Background music",
+    "busy": "Busy",
+    "depends": "Depends",
+  };
+  mapped.preferred_focus_environment = focusEnvMap[formData.q14?.toLowerCase()] || formData.q14 || "";
+
+  // Map largest distraction
+  const distractionMap: Record<string, string> = {
+    "noise": "Noise",
+    "visual-movement": "Visual movement",
+    "interruptions": "Interruptions",
+    "notifications": "Notifications",
+    "internal-thoughts": "Internal thoughts",
+  };
+  mapped.largest_distraction = distractionMap[formData.q15?.toLowerCase()] || formData.q15 || "";
+
+  mapped.emotional_swings = normalizeFrequency(formData.q16 || "");
+  mapped.stress_impact = normalizeFrequency(formData.q17 || "");
+
+  return mapped;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.json();
@@ -12,7 +99,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const googleAPIKey = process.env.GOOGLE_API_KEY;
+    const googleAPIKey = "AIzaSyBt744MGot6AhsB42gR_t2_ZjnPoNMAyLk";
 
     if (!googleAPIKey || googleAPIKey.trim() === "") {
       return NextResponse.json(
@@ -21,113 +108,117 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Map form data to notebook format
+    const userResponses = mapFormDataToNotebookFormat(formData);
+
+    // Calculate scores (same as Python notebook)
+    const inattentionItems = [
+      "attention_focus_loss",
+      "unfinished_tasks",
+      "disorganization",
+      "avoid_long_focus",
+      "losing_items",
+      "time_blindness",
+      "forgetting_deadlines",
+    ];
+
+    const hyperItems = [
+      "restlessness",
+      "interrupting",
+      "task_switching",
+    ];
+
+    const inattScore = inattentionItems.reduce(
+      (sum, key) => sum + scoreFreq(userResponses[key] || "Never"),
+      0
+    );
+    const hyperScore = hyperItems.reduce(
+      (sum, key) => sum + scoreFreq(userResponses[key] || "Never"),
+      0
+    );
+
     // Initialize Google Gemini
     const genAI = new GoogleGenerativeAI(googleAPIKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
 
-    // Build prompt from form data
-    const prompt = `You are a professional ADHD assessment assistant. Analyze the following assessment responses and determine the most likely ADHD type: "inattentive", "hyperactive", or "combined".
+    // Build prompt (same structure as Python notebook)
+    const prompt = `You are an expert in ADHD screening and UX personalization.
 
-Assessment Responses:
-- Email: ${formData.email || "Not provided"}
-- Age: ${formData.age || "Not provided"}
+Classify the user into one of these UI personas:
 
-Focus & Attention Patterns:
-1. Lose focus/get distracted during sustained attention tasks: ${formData.q1 || "Not answered"}
-2. Start tasks but leave unfinished: ${formData.q2 || "Not answered"}
-3. Struggle to organize tasks/schedules/workspace: ${formData.q3 || "Not answered"}
-4. Avoid/postpone tasks requiring long focus: ${formData.q4 || "Not answered"}
-5. Misplace or lose important items: ${formData.q5 || "Not answered"}
+1. Inattentive → The Calm Organizer
+2. Hyperactive–Impulsive → The Energetic Achiever
+3. Combined → The Adaptive Balancer
 
-Energy & Impulsivity Patterns:
-6. Feel restless, fidgety, or "on the go": ${formData.q6 || "Not answered"}
-7. Interrupt others or speak before they finish: ${formData.q7 || "Not answered"}
-8. Quickly switch tasks without finishing: ${formData.q8 || "Not answered"}
+Here are the numeric scores:
+Inattention Score = ${inattScore}
+Hyperactivity Score = ${hyperScore}
 
-Time Management:
-9. Underestimate how long tasks take (time blindness): ${formData.q9 || "Not answered"}
-10. Multiple tasks pattern: ${formData.q10 || "Not answered"}
-11. Forget appointments, deadlines, responsibilities: ${formData.q11 || "Not answered"}
+Here are the original responses:
+${JSON.stringify(userResponses, null, 2)}
 
-Social & Work Environment:
-12. Work/study environment: ${formData.q12 || "Not answered"}
-13. Feel supported by people around: ${formData.q13 || "Not answered"}
+Classification rules:
+- If Inattention >> Hyper → Inattentive subtype.
+- If Hyper >> Inattention → Hyperactive–Impulsive subtype.
+- If both are moderately high or close → Combined subtype.
+- Respond ONLY with JSON in this exact structure:
 
-Sensory & Distractibility:
-14. Best environment for focus: ${formData.q14 || "Not answered"}
-15. Most disruptive distraction type: ${formData.q15 || "Not answered"}
-16. Emotional swings affect task performance: ${formData.q16 || "Not answered"}
-17. Stress worsens ability to focus: ${formData.q17 || "Not answered"}
-
-Based on these responses, analyze the pattern:
-- Inattentive type: Primarily symptoms related to attention, organization, forgetfulness, and focus
-- Hyperactive type: Primarily symptoms related to restlessness, fidgeting, impulsivity, interrupting, and difficulty waiting
-- Combined type: Significant presence of both inattentive and hyperactive symptoms
-
-Return ONLY a JSON object in this exact format:
 {
-  "type": "inattentive" | "hyperactive" | "combined",
-  "confidence": "high" | "medium" | "low",
-  "explanation": "A brief explanation (2-3 sentences) of why this type was determined based on the assessment responses"
-}
-
-Do not include any markdown formatting, code blocks, or additional text. Only return the JSON object.`;
+  "subtype": "",
+  "persona": "",
+  "reasoning": "",
+  "recommended_ui_features": []
+}`;
 
     const response = await model.generateContent(prompt);
     const result = response.response.text();
 
-    // Clean and parse the result
+    // Clean and parse the result (same as Python notebook)
     let cleanedResult = result.trim();
-    
-    // Remove markdown code blocks if present
-    if (cleanedResult.startsWith("```")) {
-      cleanedResult = cleanedResult.replace(/```json\n?/g, "").replace(/```\n?/g, "");
-    }
-    
-    // Remove "json" prefix if present
-    if (cleanedResult.toLowerCase().startsWith("json")) {
-      cleanedResult = cleanedResult.replace(/^json\s*/i, "");
-    }
 
+    // Extract JSON even if the model adds text before/after
     let parsedResult: {
-      type: string;
-      confidence: string;
-      explanation: string;
+      subtype: string;
+      persona: string;
+      reasoning: string;
+      recommended_ui_features: string[];
     };
 
     try {
-      parsedResult = JSON.parse(cleanedResult);
+      const jsonStart = cleanedResult.indexOf("{");
+      const jsonEnd = cleanedResult.lastIndexOf("}") + 1;
+      if (jsonStart === -1 || jsonEnd === 0) {
+        throw new Error("No JSON found in response");
+      }
+      const cleaned = cleanedResult.substring(jsonStart, jsonEnd);
+      parsedResult = JSON.parse(cleaned);
     } catch (parseError) {
       console.error("Error parsing Gemini response:", parseError);
       console.error("Raw response:", result);
-      
-      // Fallback: try to extract JSON from the response
-      const jsonMatch = cleanedResult.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        parsedResult = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error("Could not parse response as JSON");
-      }
+      throw new Error(`Model did not return valid JSON:\n${result}`);
     }
 
-    // Validate response structure
-    if (!parsedResult.type || !["inattentive", "hyperactive", "combined"].includes(parsedResult.type)) {
-      // Default to combined if invalid type
-      parsedResult.type = "combined";
-    }
-
-    if (!parsedResult.confidence) {
-      parsedResult.confidence = "medium";
-    }
-
-    if (!parsedResult.explanation) {
-      parsedResult.explanation = "Based on your assessment responses, this type was determined.";
+    // Validate and normalize subtype
+    const subtype = parsedResult.subtype.toLowerCase();
+    let normalizedSubtype: "inattentive" | "hyperactive" | "combined";
+    
+    if (subtype.includes("inattentive")) {
+      normalizedSubtype = "inattentive";
+    } else if (subtype.includes("hyperactive") || subtype.includes("impulsive")) {
+      normalizedSubtype = "hyperactive";
+    } else {
+      normalizedSubtype = "combined";
     }
 
     return NextResponse.json({
-      adhdType: parsedResult.type,
-      confidence: parsedResult.confidence,
-      explanation: parsedResult.explanation,
+      subtype: normalizedSubtype,
+      persona: parsedResult.persona || "",
+      reasoning: parsedResult.reasoning || "",
+      recommended_ui_features: parsedResult.recommended_ui_features || [],
+      // Keep backward compatibility with old format
+      adhdType: normalizedSubtype,
+      confidence: "high", // Default for new format
+      explanation: parsedResult.reasoning || "",
     });
   } catch (error) {
     console.error("Error in classify API route:", error);

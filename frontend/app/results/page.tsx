@@ -5,8 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 type ClassificationResult = {
   adhdType: "inattentive" | "hyperactive" | "combined";
-  confidence: string;
+  confidence?: string;
   explanation: string;
+  // New fields from Python notebook format
+  subtype?: "inattentive" | "hyperactive" | "combined";
+  persona?: string;
+  reasoning?: string;
+  recommended_ui_features?: string[];
 };
 
 export default function ResultsPage() {
@@ -147,7 +152,9 @@ export default function ResultsPage() {
     return null;
   }
 
-  const typeInfo = getTypeDisplay(result.adhdType);
+  // Use subtype if available, otherwise fall back to adhdType
+  const adhdType = result.subtype || result.adhdType;
+  const typeInfo = getTypeDisplay(adhdType);
   const colorClasses = {
     sky: "from-sky-400 to-blue-500 border-sky-300 text-sky-900",
     violet: "from-violet-400 to-rose-500 border-violet-300 text-violet-900",
@@ -201,25 +208,61 @@ export default function ResultsPage() {
           </div>
 
           {/* Confidence Badge */}
-          <div className="flex justify-center">
-            <span
-              className={`px-4 py-2 rounded-full text-sm font-semibold ${
-                result.confidence === "high"
-                  ? "bg-green-100 text-green-800"
-                  : result.confidence === "medium"
-                  ? "bg-indigo-100 text-indigo-800"
-                  : "bg-gray-100 text-gray-800"
-              }`}
-            >
-              Confidence: {result.confidence.charAt(0).toUpperCase() + result.confidence.slice(1)}
-            </span>
-          </div>
+          {result.confidence && (
+            <div className="flex justify-center">
+              <span
+                className={`px-4 py-2 rounded-full text-sm font-semibold ${
+                  result.confidence === "high"
+                    ? "bg-green-100 text-green-800"
+                    : result.confidence === "medium"
+                    ? "bg-indigo-100 text-indigo-800"
+                    : "bg-gray-100 text-gray-800"
+                }`}
+              >
+                Confidence: {result.confidence.charAt(0).toUpperCase() + result.confidence.slice(1)}
+              </span>
+            </div>
+          )}
 
-          {/* Explanation */}
+          {/* Persona */}
+          {result.persona && (
+            <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl p-6 border-2 border-indigo-200">
+              <h3 className="text-lg font-semibold text-indigo-900 mb-2">Your UI Persona</h3>
+              <p className="text-xl font-bold text-indigo-700">{result.persona}</p>
+            </div>
+          )}
+
+          {/* Explanation/Reasoning */}
           <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900 mb-3">Assessment Summary</h3>
-            <p className="text-gray-700 leading-relaxed">{result.explanation}</p>
+            <p className="text-gray-700 leading-relaxed">{result.reasoning || result.explanation}</p>
           </div>
+
+          {/* Recommended UI Features */}
+          {result.recommended_ui_features && result.recommended_ui_features.length > 0 && (
+            <div className="bg-indigo-50 rounded-xl p-6 border-2 border-indigo-200">
+              <h3 className="text-lg font-semibold text-indigo-900 mb-4">Recommended UI Features</h3>
+              <ul className="space-y-3">
+                {result.recommended_ui_features.map((feature, index) => (
+                  <li key={index} className="flex items-start gap-3">
+                    <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${currentColor} flex items-center justify-center flex-shrink-0 mt-0.5`}>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4 text-white"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={3}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <p className="text-gray-700 leading-relaxed">{feature}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 pt-4">
@@ -227,7 +270,7 @@ export default function ResultsPage() {
               onClick={() => router.push(typeInfo.route)}
               className={`flex-1 px-8 py-4 rounded-full ${currentButton} text-white font-semibold shadow-lg transition-all hover:scale-105 text-lg`}
             >
-              Go to {typeInfo.title}
+              Explore {typeInfo.title}
             </button>
             <button
               onClick={() => router.push("/assessment")}

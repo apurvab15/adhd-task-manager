@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
             adhdType = "combined";
         }
 
-        const googleAPIKey = process.env.GOOGLE_API_KEY;
+        const googleAPIKey = "AIzaSyBt744MGot6AhsB42gR_t2_ZjnPoNMAyLk";
 
 
         if (!googleAPIKey || googleAPIKey.trim() === "") {
