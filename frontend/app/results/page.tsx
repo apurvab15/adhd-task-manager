@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { getApiKey, promptForApiKey } from "@/utils/apiKeyManager";
 
 type ClassificationResult = {
   adhdType: "inattentive" | "hyperactive" | "combined";
@@ -30,26 +31,67 @@ export default function ResultsPage() {
           formData[key] = value;
         });
 
+        // Get API key from storage or prompt user
+        let apiKey = getApiKey();
+        
         // Call the classification API
-        const response = await fetch("/api/classify", {
+        let response = await fetch("/api/classify", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(formData),
+          body: JSON.stringify({
+            ...formData,
+            ...(apiKey ? { apiKey } : {})
+          }),
         });
 
-        if (!response.ok) {
-          // Check if response is JSON before trying to parse
+        let data = await response.json();
+
+        // If API key is required, prompt user and retry
+        if (!response.ok && data.requiresApiKey) {
+          apiKey = await promptForApiKey();
+          if (!apiKey) {
+            throw new Error("API key is required to classify ADHD type");
+          }
+          
+          // Retry with API key
+          response = await fetch("/api/classify", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              ...formData,
+              apiKey
+            }),
+          });
+
+          if (!response.ok) {
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+              const errorData = await response.json();
+              const errorMessage = errorData.details 
+                ? `${errorData.error}: ${errorData.details}` 
+                : errorData.error || `Failed to classify ADHD type (${response.status})`;
+              throw new Error(errorMessage);
+            } else {
+              const errorText = await response.text();
+              throw new Error(`Server error: ${response.status} ${response.statusText}. ${errorText.substring(0, 200)}`);
+            }
+          }
+
+          data = await response.json();
+        } else if (!response.ok) {
+          // Handle other errors
           const contentType = response.headers.get("content-type");
           if (contentType && contentType.includes("application/json")) {
-            const errorData = await response.json();
+            const errorData = data;
             const errorMessage = errorData.details 
               ? `${errorData.error}: ${errorData.details}` 
               : errorData.error || `Failed to classify ADHD type (${response.status})`;
             throw new Error(errorMessage);
           } else {
-            // Response is HTML or text, not JSON
             const errorText = await response.text();
             throw new Error(`Server error: ${response.status} ${response.statusText}. ${errorText.substring(0, 200)}`);
           }
@@ -62,7 +104,6 @@ export default function ResultsPage() {
           throw new Error(`Unexpected response format. Expected JSON but got: ${contentType}`);
         }
 
-        const data = await response.json();
         setResult(data);
         setLoading(false);
       } catch (err) {

@@ -94,6 +94,9 @@ export async function POST(req: NextRequest) {
     const formData = await req.json();
     console.log("formData", formData);
 
+    // Extract apiKey from formData if present
+    const { apiKey, ...actualFormData } = formData;
+
     if (!formData || Object.keys(formData).length === 0) {
       return NextResponse.json(
         { error: "No form data provided" },
@@ -103,19 +106,23 @@ export async function POST(req: NextRequest) {
       console.log("formData is not empty");
     }
 
-    const googleAPIKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    // Check for API key: first from request body, then from environment
+    const googleAPIKey = apiKey || process.env.GOOGLE_API_KEY;
 
     if (!googleAPIKey || googleAPIKey.trim() === "") {
       return NextResponse.json(
-        { error: "Google API key is not set" },
+        { 
+          error: "Google API key is not set",
+          requiresApiKey: true 
+        },
         { status: 500 }
       );
     } else {
       console.log("googleAPIKey is set");
     }
 
-    // Map form data to notebook format
-    const userResponses = mapFormDataToNotebookFormat(formData);
+    // Map form data to notebook format (use actualFormData instead of formData)
+    const userResponses = mapFormDataToNotebookFormat(actualFormData);
 
     // Calculate scores (same as Python notebook)
     const inattentionItems = [

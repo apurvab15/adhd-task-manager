@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
     try {
-        let { userTask, adhdType } = await req.json();
+        let { userTask, adhdType, apiKey } = await req.json();
 
 
         if (!userTask || userTask.length === 0) {
@@ -15,10 +15,15 @@ export async function POST(req: NextRequest) {
             adhdType = "combined";
         }
 
-        const googleAPIKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+        // Check for API key: first from request body, then from environment
+        const googleAPIKey = apiKey || process.env.GOOGLE_API_KEY;
+
 
         if (!googleAPIKey || googleAPIKey.trim() === "") {
-            return NextResponse.json({ error: "Google API key is not set" }, { status: 500 });
+            return NextResponse.json({ 
+                error: "Google API key is not set",
+                requiresApiKey: true 
+            }, { status: 500 });
         } else {
             console.log("Google API key is set");
         }
