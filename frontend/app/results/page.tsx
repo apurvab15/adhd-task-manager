@@ -40,8 +40,23 @@ export default function ResultsPage() {
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || "Failed to classify ADHD type");
+          // Check if response is JSON before trying to parse
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `Failed to classify ADHD type (${response.status})`);
+          } else {
+            // Response is HTML or text, not JSON
+            const errorText = await response.text();
+            throw new Error(`Server error: ${response.status} ${response.statusText}`);
+          }
+        }
+
+        // Verify response is JSON before parsing
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          const text = await response.text();
+          throw new Error(`Unexpected response format. Expected JSON but got: ${contentType}`);
         }
 
         const data = await response.json();
