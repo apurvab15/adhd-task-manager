@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
       console.log("formData is not empty");
     }
 
-    const googleAPIKey = process.env.GOOGLE_API_KEY;
+    const googleAPIKey = "AIzaSyDFphVdNdeh6ClLlr1532BNl081rt-FRdQ";
 
     if (!googleAPIKey || googleAPIKey.trim() === "") {
       return NextResponse.json(
