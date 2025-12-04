@@ -30,6 +30,13 @@ export default function ResultsPage() {
           formData[key] = value;
         });
 
+        // Ensure API key is included
+        if (!formData.apiKey) {
+          setError("API key is missing from the request");
+          setLoading(false);
+          return;
+        }
+
         // Call the classification API
         const response = await fetch("/api/classify", {
           method: "POST",
@@ -64,6 +71,12 @@ export default function ResultsPage() {
 
         const data = await response.json();
         setResult(data);
+        
+        // Store API key in localStorage for later use in task breaking
+        if (formData.apiKey && typeof window !== "undefined") {
+          window.localStorage.setItem("google-api-key", formData.apiKey);
+        }
+        
         setLoading(false);
       } catch (err) {
         console.error("Error classifying:", err);

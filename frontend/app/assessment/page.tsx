@@ -28,6 +28,7 @@ type FormData = {
   q15: string; // type of distraction
   q16: string; // emotional swings
   q17: string; // stress worsens focus
+  apiKey: string; // Google API key
 };
 
 export default function AssessmentPage() {
@@ -52,6 +53,7 @@ export default function AssessmentPage() {
     q15: "",
     q16: "",
     q17: "",
+    apiKey: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
@@ -72,7 +74,14 @@ export default function AssessmentPage() {
     }
     // Check all questions (q1 through q17)
     const questionKeys: Array<keyof FormData> = ['q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7', 'q8', 'q9', 'q10', 'q11', 'q12', 'q13', 'q14', 'q15', 'q16', 'q17'];
-    return questionKeys.every(key => formData[key] && formData[key].trim() !== '');
+    if (!questionKeys.every(key => formData[key] && formData[key].trim() !== '')) {
+      return false;
+    }
+    // Check API key
+    if (!formData.apiKey || formData.apiKey.trim() === '') {
+      return false;
+    }
+    return true;
   };
 
   const validateForm = (): boolean => {
@@ -94,6 +103,11 @@ export default function AssessmentPage() {
         newErrors[key] = "This question is required";
       }
     });
+
+    // Validate API key
+    if (!formData.apiKey || formData.apiKey.trim() === '') {
+      newErrors.apiKey = "API key is required";
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -435,6 +449,36 @@ export default function AssessmentPage() {
                   options={defaultOptions}
                   error={errors.q17}
                 />
+              </div>
+            </div>
+
+            {/* API Key Section */}
+            <div className="space-y-4 pt-4">
+              <div className="bg-indigo-100 rounded-lg p-4 border-2 border-indigo-300">
+                <h3 className="text-xl font-bold text-indigo-900 mb-2">API Configuration</h3>
+                <p className="text-sm text-indigo-700">
+                  Please provide your Google Generative AI API key to enable task classification and breakdown features.
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="apiKey" className="block text-sm font-medium text-indigo-900 mb-2">
+                  Google API Key <span className="text-indigo-600">*</span>
+                </label>
+                <input
+                  type="password"
+                  id="apiKey"
+                  value={formData.apiKey}
+                  onChange={(e) => handleChange("apiKey", e.target.value)}
+                  className={`w-full rounded-lg border-2 ${
+                    errors.apiKey ? "border-red-300" : "border-indigo-200"
+                  } bg-white px-4 py-2 text-indigo-900 focus:border-indigo-400 focus:outline-none transition-colors`}
+                  placeholder="Enter your Google Generative AI API key"
+                />
+                {errors.apiKey && <p className="mt-1 text-sm text-red-600">{errors.apiKey}</p>}
+                <p className="mt-1 text-xs text-indigo-600">
+                  Your API key will be used securely for task classification and breakdown features.
+                </p>
               </div>
             </div>
           </div>

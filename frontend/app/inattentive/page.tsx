@@ -133,6 +133,40 @@ export default function InattentivePage() {
     };
   }, []);
 
+  // Listen for updates coming from the Task Manager (TaskListWindow)
+  // so that when tasks are toggled there, the Inattentive view stays in sync.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleTodayTasksUpdated = () => {
+      try {
+        const saved = window.localStorage.getItem(TODAY_TASKS_KEY);
+        if (!saved) return;
+
+        const parsed = JSON.parse(saved);
+        const today = new Date().toDateString();
+        if (parsed.date === today) {
+          const tasks: Task[] = parsed.tasks || [];
+          setTodayTasks(tasks);
+
+          // Keep nextTaskId ahead of any existing IDs
+          if (tasks.length > 0) {
+            const maxId = Math.max(...tasks.map((t: Task) => t.id));
+            nextTaskId.current = Math.max(nextTaskId.current, maxId + 1);
+          }
+        }
+      } catch (error) {
+        console.error("Error syncing today's tasks from Task Manager:", error);
+      }
+    };
+
+    window.addEventListener("todayTasksUpdated", handleTodayTasksUpdated);
+
+    return () => {
+      window.removeEventListener("todayTasksUpdated", handleTodayTasksUpdated);
+    };
+  }, []);
+
   // Save today's tasks to localStorage (separate storage, not synced to task lists)
   useEffect(() => {
     if (!isHydrated || typeof window === "undefined") return;
@@ -156,7 +190,30 @@ export default function InattentivePage() {
       if (!task) return tasks;
 
       const newDone = !task.done;
+
       if (typeof window !== "undefined") {
+        // Sync completion state back to the underlying task lists so that
+        // the Task Manager view reflects what was ticked here.
+        try {
+          const savedLists = window.localStorage.getItem(STORAGE_KEY);
+          if (savedLists) {
+            const parsedLists: TaskList[] = JSON.parse(savedLists);
+            const updatedLists = parsedLists.map((list) => ({
+              ...list,
+              tasks: list.tasks.map((t) =>
+                t.id === taskId ? { ...t, done: newDone } : t
+              ),
+            }));
+            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedLists));
+
+            // Let any listeners (e.g., Task Manager) know that task lists changed
+            window.dispatchEvent(new CustomEvent("taskListUpdated"));
+          }
+        } catch (error) {
+          console.error("Error syncing task completion to task lists:", error);
+        }
+
+        // Gamification: award/revoke XP and notify listeners
         if (newDone && !task.done) {
           // Marking as done – award XP
           awardXPForTask();
@@ -164,7 +221,7 @@ export default function InattentivePage() {
           // Unchecking a completed task – revoke XP
           revokeXPForTaskCompletion();
         }
-        // Notify listeners that gamification stats changed
+
         window.dispatchEvent(new CustomEvent("taskCompleted"));
       }
 

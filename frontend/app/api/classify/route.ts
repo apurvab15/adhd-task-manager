@@ -103,12 +103,12 @@ export async function POST(req: NextRequest) {
       console.log("formData is not empty");
     }
 
-    const googleAPIKey = "AIzaSyDFphVdNdeh6ClLlr1532BNl081rt-FRdQ";
+    const googleAPIKey = formData.apiKey || formData.api_key;
 
     if (!googleAPIKey || googleAPIKey.trim() === "") {
       return NextResponse.json(
         { error: "Google API key is not set" },
-        { status: 500 }
+        { status: 400 }
       );
     } else {
       console.log("googleAPIKey is set");

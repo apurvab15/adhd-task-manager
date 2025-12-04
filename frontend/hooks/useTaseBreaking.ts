@@ -8,15 +8,27 @@ export type task = {
 
 export type ADHDType = "inattentive" | "hyperactive" | "combined";
 
-export function useTaskBreaker(userTask: string, adhdType: ADHDType = "combined") {
+export function useTaskBreaker(defaultAdhdType: ADHDType = "combined") {
 
     const [isBreaking, setIsBreaking] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const breakTask = async (userTask: string, adhdType: ADHDType = "combined") => {
+    const breakTask = async (userTask: string, adhdType?: ADHDType) => {
+        const finalAdhdType = adhdType || defaultAdhdType;
 
         if (!userTask || userTask.trim() === "") {
             setError("Task cannot be empty");
+            return;
+        }
+
+        // Get API key from localStorage
+        let apiKey = "";
+        if (typeof window !== "undefined") {
+            apiKey = window.localStorage.getItem("google-api-key") || "";
+        }
+
+        if (!apiKey || apiKey.trim() === "") {
+            setError("API key is not set. Please complete the assessment first.");
             return;
         }
 
@@ -25,7 +37,10 @@ export function useTaskBreaker(userTask: string, adhdType: ADHDType = "combined"
         try {
             const response = await fetch("/api/break-tasks", {
                 method: "POST",
-                body: JSON.stringify({ userTask: userTask.trim(), adhdType: adhdType }),
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ userTask: userTask.trim(), adhdType: finalAdhdType, apiKey: apiKey }),
             });
 
             if (!response.ok) {

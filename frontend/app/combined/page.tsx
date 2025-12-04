@@ -763,7 +763,7 @@ export default function CombinedPage() {
             {/* Input area - Small and Simple */}
             <div className="mt-6 border-t border-[#7085FF]/10 pt-4 flex items-center gap-2">
               <input
-                ref={inputRef as React.RefObject<HTMLInputElement>}
+                ref={inputRef as unknown as React.RefObject<HTMLInputElement>}
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -973,7 +973,7 @@ export default function CombinedPage() {
             {/* Input area with Add and Break Task buttons */}
             <div className={`mt-4 border-t border-zinc-200 pt-4 flex items-start gap-3 rounded-2xl border ${colorPalette.border} bg-white/80 p-3`}>
               <textarea
-                ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+                ref={inputRef as unknown as React.RefObject<HTMLTextAreaElement>}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
