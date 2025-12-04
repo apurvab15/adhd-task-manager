@@ -15,8 +15,7 @@ export async function POST(req: NextRequest) {
             adhdType = "combined";
         }
 
-        const googleAPIKey = "AIzaSyDFphVdNdeh6ClLlr1532BNl081rt-FRdQ";
-
+        const googleAPIKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 
         if (!googleAPIKey || googleAPIKey.trim() === "") {
             return NextResponse.json({ error: "Google API key is not set" }, { status: 500 });
