@@ -19,11 +19,13 @@ type TaskList = {
 type FocusModeModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  mode?: "inattentive" | "hyperactive";
+  mode?: "inattentive" | "hyperactive" | "combined";
 };
 
-const getStorageKey = (mode: "inattentive" | "hyperactive") => {
-  return mode === "inattentive" ? "adhd-task-lists-inattentive" : "adhd-task-lists-hyperactive";
+const getStorageKey = (mode: "inattentive" | "hyperactive" | "combined") => {
+  if (mode === "inattentive") return "adhd-task-lists-inattentive";
+  if (mode === "hyperactive") return "adhd-task-lists-hyperactive";
+  return "adhd-task-lists-combined";
 };
 
 const FOCUS_MODE_STORAGE_KEY = "adhd-focus-mode-tasks";
