@@ -104,6 +104,57 @@ export function awardXPForTask(): UserStats {
   return stats;
 }
 
+/**
+ * Revoke XP and task counts when a previously completed task is marked as incomplete again.
+ * This mirrors {@link awardXPForTask} but in reverse, and keeps values from going below zero.
+ */
+export function revokeXPForTaskCompletion(): UserStats {
+  const stats = getStats();
+  const today = new Date().toDateString();
+  const lastDate = window.localStorage.getItem(XP_STORAGE_KEY)
+    ? JSON.parse(window.localStorage.getItem(XP_STORAGE_KEY) || "{}").lastDate || ""
+    : "";
+
+  // Subtract XP, but don't go below zero
+  stats.totalXP = Math.max(0, stats.totalXP - XP_PER_TASK);
+  
+  // Decrement task counts, but don't go below zero
+  stats.tasksCompleted = Math.max(0, stats.tasksCompleted - 1);
+  stats.tasksCompletedToday = lastDate === today 
+    ? Math.max(0, stats.tasksCompletedToday - 1) 
+    : 0;
+
+  const { level, currentLevelXP, xpToNextLevel } = calculateLevel(stats.totalXP);
+  stats.level = level;
+  stats.currentLevelXP = currentLevelXP;
+  stats.xpToNextLevel = xpToNextLevel;
+
+  saveStats(stats);
+  return stats;
+}
+
+/**
+ * Penalize XP when an uncompleted task is deleted.
+ * This subtracts XP but does NOT change task completion counts (since the task was never completed).
+ */
+export function penalizeXPForUncompletedTask(): UserStats {
+  const stats = getStats();
+
+  // Subtract XP, but don't go below zero
+  stats.totalXP = Math.max(0, stats.totalXP - XP_PER_TASK);
+  
+  // Note: We don't change tasksCompleted or tasksCompletedToday here
+  // because the task was never completed in the first place
+
+  const { level, currentLevelXP, xpToNextLevel } = calculateLevel(stats.totalXP);
+  stats.level = level;
+  stats.currentLevelXP = currentLevelXP;
+  stats.xpToNextLevel = xpToNextLevel;
+
+  saveStats(stats);
+  return stats;
+}
+
 export function getProgressPercentage(stats: UserStats): number {
   if (stats.xpToNextLevel === XP_PER_LEVEL) return 0;
   return ((XP_PER_LEVEL - stats.xpToNextLevel) / XP_PER_LEVEL) * 100;
