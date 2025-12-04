@@ -29,23 +29,35 @@ export async function POST(req: NextRequest) {
     const prompt = `You are a professional ADHD assessment assistant. Analyze the following assessment responses and determine the most likely ADHD type: "inattentive", "hyperactive", or "combined".
 
 Assessment Responses:
-- Name: ${formData.name || "Not provided"}
+- Email: ${formData.email || "Not provided"}
 - Age: ${formData.age || "Not provided"}
-- Difficulty sustaining attention: ${formData.concentration || "Not answered"}
-- Difficulty organizing tasks: ${formData.organization || "Not answered"}
-- Forgetfulness: ${formData.forgetfulness || "Not answered"}
-- Difficulty listening: ${formData.listening || "Not answered"}
-- Fails to follow through: ${formData.followThrough || "Not answered"}
-- Restlessness: ${formData.restlessness || "Not answered"}
-- Fidgeting: ${formData.fidgeting || "Not answered"}
-- Impulsivity: ${formData.impulsivity || "Not answered"}
-- Interrupting others: ${formData.interrupting || "Not answered"}
-- Difficulty waiting: ${formData.waiting || "Not answered"}
-- Careless mistakes: ${formData.details || "Not answered"}
-- Avoids sustained mental effort: ${formData.activities || "Not answered"}
-- Symptoms since childhood: ${formData.symptoms || "Not answered"}
-- Duration of symptoms: ${formData.duration || "Not answered"}
-- Impact on daily life: ${formData.impact || "Not provided"}
+
+Focus & Attention Patterns:
+1. Lose focus/get distracted during sustained attention tasks: ${formData.q1 || "Not answered"}
+2. Start tasks but leave unfinished: ${formData.q2 || "Not answered"}
+3. Struggle to organize tasks/schedules/workspace: ${formData.q3 || "Not answered"}
+4. Avoid/postpone tasks requiring long focus: ${formData.q4 || "Not answered"}
+5. Misplace or lose important items: ${formData.q5 || "Not answered"}
+
+Energy & Impulsivity Patterns:
+6. Feel restless, fidgety, or "on the go": ${formData.q6 || "Not answered"}
+7. Interrupt others or speak before they finish: ${formData.q7 || "Not answered"}
+8. Quickly switch tasks without finishing: ${formData.q8 || "Not answered"}
+
+Time Management:
+9. Underestimate how long tasks take (time blindness): ${formData.q9 || "Not answered"}
+10. Multiple tasks pattern: ${formData.q10 || "Not answered"}
+11. Forget appointments, deadlines, responsibilities: ${formData.q11 || "Not answered"}
+
+Social & Work Environment:
+12. Work/study environment: ${formData.q12 || "Not answered"}
+13. Feel supported by people around: ${formData.q13 || "Not answered"}
+
+Sensory & Distractibility:
+14. Best environment for focus: ${formData.q14 || "Not answered"}
+15. Most disruptive distraction type: ${formData.q15 || "Not answered"}
+16. Emotional swings affect task performance: ${formData.q16 || "Not answered"}
+17. Stress worsens ability to focus: ${formData.q17 || "Not answered"}
 
 Based on these responses, analyze the pattern:
 - Inattentive type: Primarily symptoms related to attention, organization, forgetfulness, and focus

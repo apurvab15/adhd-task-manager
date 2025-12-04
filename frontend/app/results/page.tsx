@@ -79,7 +79,7 @@ export default function ResultsPage() {
         return {
           title: "Unknown Type",
           description: "Unable to determine your ADHD type.",
-          color: "amber",
+          color: "indigo",
           route: "/combined",
         };
     }
@@ -87,21 +87,21 @@ export default function ResultsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-amber-50 to-yellow-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center space-y-8">
           <div className="relative">
             <div className="w-24 h-24 mx-auto">
-              <div className="absolute inset-0 border-4 border-amber-200 border-t-amber-600 rounded-full animate-spin"></div>
+              <div className="absolute inset-0 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
             </div>
           </div>
           <div className="space-y-2">
-            <h2 className="text-3xl font-bold text-amber-900">Analyzing Your Assessment</h2>
-            <p className="text-amber-700 text-lg">Please wait while we process your responses...</p>
+            <h2 className="text-3xl font-bold text-indigo-900">Analyzing Your Assessment</h2>
+            <p className="text-indigo-700 text-lg">Please wait while we process your responses...</p>
           </div>
           <div className="flex justify-center space-x-2">
-            <div className="w-3 h-3 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
-            <div className="w-3 h-3 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
-            <div className="w-3 h-3 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
+            <div className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
+            <div className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
+            <div className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
           </div>
         </div>
       </div>
@@ -110,7 +110,7 @@ export default function ResultsPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-amber-50 to-yellow-100 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-indigo-100 flex items-center justify-center px-4">
         <div className="max-w-md w-full bg-white/80 backdrop-blur-sm rounded-2xl border-2 border-red-200 shadow-lg p-8 text-center space-y-6">
           <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center">
             <svg
@@ -134,7 +134,7 @@ export default function ResultsPage() {
           </div>
           <button
             onClick={() => router.push("/assessment")}
-            className="w-full px-6 py-3 rounded-full bg-amber-600 text-white font-semibold hover:bg-amber-700 transition-colors"
+            className="w-full px-6 py-3 rounded-full bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition-colors"
           >
             Try Again
           </button>
@@ -152,24 +152,24 @@ export default function ResultsPage() {
     sky: "from-sky-400 to-blue-500 border-sky-300 text-sky-900",
     violet: "from-violet-400 to-rose-500 border-violet-300 text-violet-900",
     orange: "from-orange-400 to-amber-500 border-orange-300 text-orange-900",
-    amber: "from-amber-400 to-yellow-500 border-amber-300 text-amber-900",
+    indigo: "from-indigo-400 to-blue-500 border-indigo-300 text-indigo-900",
   };
   const bgColorClasses = {
     sky: "from-sky-50 via-white to-blue-50",
     violet: "from-violet-50 via-white to-rose-50",
     orange: "from-orange-50 via-white to-amber-50",
-    amber: "from-amber-50 via-white to-yellow-50",
+    indigo: "from-indigo-50 via-white to-blue-50",
   };
   const buttonColorClasses = {
     sky: "bg-sky-600 hover:bg-sky-700 shadow-sky-500/50 hover:shadow-sky-600/60",
     violet: "bg-violet-600 hover:bg-violet-700 shadow-violet-500/50 hover:shadow-violet-600/60",
     orange: "bg-orange-600 hover:bg-orange-700 shadow-orange-500/50 hover:shadow-orange-600/60",
-    amber: "bg-amber-600 hover:bg-amber-700 shadow-amber-500/50 hover:shadow-amber-600/60",
+    indigo: "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/50 hover:shadow-indigo-600/60",
   };
 
-  const currentColor = colorClasses[typeInfo.color as keyof typeof colorClasses] || colorClasses.amber;
-  const currentBg = bgColorClasses[typeInfo.color as keyof typeof bgColorClasses] || bgColorClasses.amber;
-  const currentButton = buttonColorClasses[typeInfo.color as keyof typeof buttonColorClasses] || buttonColorClasses.amber;
+  const currentColor = colorClasses[typeInfo.color as keyof typeof colorClasses] || colorClasses.indigo;
+  const currentBg = bgColorClasses[typeInfo.color as keyof typeof bgColorClasses] || bgColorClasses.indigo;
+  const currentButton = buttonColorClasses[typeInfo.color as keyof typeof buttonColorClasses] || buttonColorClasses.indigo;
 
   return (
     <div className={`min-h-screen bg-gradient-to-br ${currentBg} flex items-center justify-center px-4 py-12`}>
@@ -207,7 +207,7 @@ export default function ResultsPage() {
                 result.confidence === "high"
                   ? "bg-green-100 text-green-800"
                   : result.confidence === "medium"
-                  ? "bg-yellow-100 text-yellow-800"
+                  ? "bg-indigo-100 text-indigo-800"
                   : "bg-gray-100 text-gray-800"
               }`}
             >
@@ -231,7 +231,7 @@ export default function ResultsPage() {
             </button>
             <button
               onClick={() => router.push("/assessment")}
-              className="flex-1 px-8 py-4 rounded-full border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition-colors text-lg"
+              className="flex-1 px-8 py-4 rounded-full border-2 border-indigo-300 text-indigo-700 font-semibold hover:bg-indigo-100 transition-colors text-lg"
             >
               Retake Assessment
             </button>
