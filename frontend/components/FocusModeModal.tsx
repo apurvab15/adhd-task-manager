@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { violetPalette, skyPalette, periwinklePalette, type ColorPalette } from "./TaskListDrawer";
+import { awardXPForFocusMode } from "@/utils/gamification";
 
 type Task = {
   id: number;
@@ -96,6 +97,12 @@ export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }
     if (typeof window !== "undefined") {
       window.localStorage.setItem(FOCUS_MODE_STORAGE_KEY, JSON.stringify(selectedTasks));
       window.localStorage.setItem(FOCUS_MODE_TIMER_KEY, timerMinutes.toString());
+      
+      // Award XP for going to focus mode (10 points) - only in hyperactive mode
+      if (mode === "hyperactive") {
+        awardXPForFocusMode();
+        window.dispatchEvent(new CustomEvent("taskCompleted"));
+      }
     }
 
     // Navigate to focus mode page with mode parameter

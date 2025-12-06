@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useGamification } from "@/hooks/useGamification";
-import { getProgressPercentage, awardXPForTask, revokeXPForTaskCompletion } from "@/utils/gamification";
+import { getProgressPercentage, awardXPForTask, revokeXPForTaskCompletion, getLevelEmoji, awardXPForBreakingTask, awardXPForFocusMode } from "@/utils/gamification";
+import RadialProgress from "@/components/RadialProgress";
 import { useTaskBreaker } from "@/hooks/useTaseBreaking";
 import FocusModeModal from "@/components/FocusModeModal";
 import AddTasksModal from "@/components/AddTasksModal";
@@ -64,7 +65,7 @@ export default function HyperactivePage() {
   const [isHydrated, setIsHydrated] = useState(false);
   const [motivationMessage, setMotivationMessage] = useState("");
   const [input, setInput] = useState("");
-  const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const nextTaskId = useRef(1);
   const nextListId = useRef(1);
   const confettiRef = useRef<JSConfetti | null>(null);
@@ -387,6 +388,10 @@ export default function HyperactivePage() {
     const validTasks = brokenTasksList.filter((t) => t.text.trim() !== "");
     if (validTasks.length === 0) return;
 
+    // Award XP for breaking a task (10 points)
+    awardXPForBreakingTask();
+    window.dispatchEvent(new CustomEvent("taskCompleted"));
+
     // Generate unique IDs for tasks
     const tasksWithIds = validTasks.map((task) => ({
       id: nextTaskId.current++,
@@ -488,11 +493,11 @@ export default function HyperactivePage() {
   }, [stats.level]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-white to-slate-100">
+    <div className="h-screen overflow-hidden bg-gradient-to-br from-rose-50 via-white to-slate-100 flex flex-col">
       {/* Navigation Bar */}
-      <nav className="border-b border-black/5 bg-white/80 backdrop-blur-sm">
-        <div className="flex items-center justify-between px-4 py-3">
-          <Link href="/hyperactive" className="text-violet-600 transition-colors hover:text-violet-700">
+      <nav className="flex-shrink-0 border-b border-black/5 bg-white/90 backdrop-blur-sm">
+        <div className="flex items-center gap-4 px-4 py-3">
+          <Link href="/hyperactive" className="flex items-center gap-2 text-violet-600 transition-colors hover:text-violet-700">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
@@ -505,8 +510,25 @@ export default function HyperactivePage() {
                 clipRule="evenodd"
               />
             </svg>
+            <span className="text-lg font-semibold">Energetic Hustler</span>
           </Link>
-          <div className="flex items-center gap-4">
+          {/* Progress Bar */}
+          <div className="flex-1 flex items-center gap-3">
+            {totalToday > 0 ? (
+              <>
+                <div className="flex-1 h-2 overflow-hidden rounded-full bg-violet-200/30">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-violet-500 to-rose-500 transition-all duration-500"
+                    style={{ width: `${(completedToday / totalToday) * 100}%` }}
+                  />
+                </div>
+                <span className="text-sm font-medium text-violet-700 whitespace-nowrap">{completedToday}/{totalToday}</span>
+              </>
+            ) : (
+              <p className="text-sm font-medium text-violet-600">Let&apos;s get started for today, set our goals!</p>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
             <Link
               href="/tasks?mode=hyperactive"
               className="flex items-center justify-center rounded-lg p-2 bg-white border-2 border-violet-600 text-violet-600 transition-colors hover:bg-violet-50"
@@ -530,125 +552,78 @@ export default function HyperactivePage() {
       </nav>
 
       {/* 3 Column Layout */}
-      <main className="flex h-[calc(100vh-73px)] gap-2 p-2">
-        {/* Left Column - Overall Progress & Gamification */}
+      <main className="flex-1 flex gap-2 p-2 overflow-hidden min-h-0">
+        {/* Left Column - Gamification */}
         <div className={`flex-1 rounded-2xl border ${colorPalette.border} bg-gradient-to-br ${colorPalette.bg} p-6 shadow-lg ${colorPalette.shadow} flex flex-col overflow-y-auto`}>
           <div className="space-y-6">
-            {/* Level & XP */}
-            <div className="space-y-2">
+            {/* Title */}
+            <div>
               <p className="text-xs font-semibold uppercase tracking-[0.4em] text-zinc-500">
                 Your Progress
               </p>
-              <div className="flex items-baseline gap-3">
-                <h2 className="text-3xl font-bold text-zinc-900">Level {stats.level}</h2>
-                <span className={`text-lg font-semibold ${colorPalette.text}`}>{stats.totalXP} XP</span>
-              </div>
+            </div>
+
+            {/* Radial Progress Bar with Emoji */}
+            <div className="flex justify-center">
+              <RadialProgress 
+                percentage={progressPercentage} 
+                emoji={getLevelEmoji(stats.level)}
+                size={180}
+              />
+            </div>
+
+            {/* Level Number with XP */}
+            <div className="text-center space-y-1">
+              <p className="text-lg font-bold text-zinc-900">
+                LEVEL {stats.level}
+              </p>
               <p className="text-sm text-zinc-600">
-                {stats.tasksCompletedToday} task{stats.tasksCompletedToday !== 1 ? "s" : ""} completed today
+                {stats.currentLevelXP} / 100 XP
               </p>
             </div>
 
-            {/* Level Progress Bar */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs font-medium text-zinc-600">
-                <span>Progress to Level {stats.level + 1}</span>
-                <span>{stats.currentLevelXP}/100 XP</span>
-              </div>
-              <div className="h-3 w-full overflow-hidden rounded-full bg-zinc-200">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-violet-500 to-rose-500 transition-all duration-500"
-                  style={{ width: `${progressPercentage}%` }}
-                />
-              </div>
+            {/* Action Buttons */}
+            <div className="space-y-3">
+              <button
+                onClick={() => setIsFocusModalOpen(true)}
+                className={`w-full rounded-xl ${colorPalette.accent} px-4 py-3 text-sm font-semibold text-white transition ${colorPalette.accentHover} flex items-center justify-center gap-2`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" className="h-4 w-4">
+                  <path d="M448 256A192 192 0 1 0 64 256a192 192 0 1 0 384 0zM0 256a256 256 0 1 1 512 0A256 256 0 1 1 0 256zm256 80a80 80 0 1 0 0-160 80 80 0 1 0 0 160zm0-224a144 144 0 1 1 0 288 144 144 0 1 1 0-288zM224 256a32 32 0 1 1 64 0 32 32 0 1 1 -64 0z"/>
+                </svg>
+                Go to Focus Mode
+              </button>
+              <button
+                onClick={() => {
+                  if (input.trim()) {
+                    handleBreakTasks(input);
+                  } else {
+                    // If no input, just open the break modal with empty input
+                    setIsBreakTasksModalOpen(true);
+                  }
+                }}
+                className={`w-full rounded-xl border ${colorPalette.borderLight} bg-white px-4 py-3 text-sm font-semibold ${colorPalette.text} transition ${colorPalette.accentLight.replace('bg-', 'hover:bg-')} flex items-center justify-center gap-2`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                  <path d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684ZM13.949 13.684a1 1 0 0 0-1.898 0l-.184.551a1 1 0 0 1-.632.633l-.551.183a1 1 0 0 0 0 1.898l.551.183a1 1 0 0 1 .633.633l.183.551a1 1 0 0 0 1.898 0l.184-.551a1 1 0 0 1 .632-.633l.551-.183a1 1 0 0 0 0-1.898l-.551-.184a1 1 0 0 1-.633-.632l-.183-.551Z" />
+                </svg>
+                Break a Task
+              </button>
             </div>
-
-            {/* Overall Task Completion */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs font-medium text-zinc-600">
-                <span>Overall Completion</span>
-                <span>{completedTasks}/{totalTasks} tasks</span>
-              </div>
-              <div className="h-3 w-full overflow-hidden rounded-full bg-zinc-200">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-sky-500 to-violet-500 transition-all duration-500"
-                  style={{ width: `${overallCompletionRate}%` }}
-                />
-              </div>
-              <p className="text-xs text-zinc-500">{Math.round(overallCompletionRate)}% complete</p>
-            </div>
-
-            {/* Stats Cards */}
-            {/* <div className="grid grid-cols-2 gap-3">
-              <div className={`rounded-xl border ${colorPalette.borderLight} bg-white/80 p-3`}>
-                <p className="text-xs text-zinc-500">Total Tasks</p>
-                <p className={`text-2xl font-bold ${colorPalette.textDark}`}>{stats.tasksCompleted}</p>
-              </div>
-              <div className="rounded-xl border border-rose-200 bg-white/80 p-3">
-                <p className="text-xs text-zinc-500">Today</p>
-                <p className="text-2xl font-bold text-rose-900">{stats.tasksCompletedToday}</p>
-              </div>
-            </div> */}
-
-            {/* Motivation Message */}
-            {motivationMessage && (
-              <div className={`rounded-xl border ${colorPalette.borderLight} bg-gradient-to-br ${colorPalette.bg} p-4`}>
-                <div className="flex items-center justify-between gap-2">
-                  <p className={`text-sm font-medium ${colorPalette.textDark} flex-1 text-center`}>
-                    {motivationMessage}
-                  </p>
-                  <button
-                    onClick={handleNewMessage}
-                    className={`flex-shrink-0 rounded-lg p-1.5 ${colorPalette.text} transition-colors ${colorPalette.accentLight.replace('bg-', 'hover:bg-')}`}
-                    aria-label="Get new message"
-                    title="Get new message"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                      className="h-4 w-4"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M15.312 11.424a5.5 5.5 0 0 1-9.201 2.466l-.312-.311h2.433a.75.75 0 0 0 0-1.5H3.989a.75.75 0 0 0-.75.75v4.242a.75.75 0 0 0 1.5 0v-2.43l.31.31a7 7 0 0 0 11.712-3.138.75.75 0 0 0-1.449-.39Zm1.23-3.723a.75.75 0 0 0 .219-.53V2.929a.75.75 0 0 0-1.5 0V5.36l-.31-.31A7 7 0 0 0 3.239 8.188a.75.75 0 1 0 1.448.389A5.5 5.5 0 0 1 13.89 6.11l.311.31h-2.432a.75.75 0 0 0 0 1.5h4.243a.75.75 0 0 0 .53-.219Z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
         {/* Middle Column - Today's Task List */}
-        <div className="flex-[2] rounded-2xl border border-black/5 bg-white/90 p-6 shadow-lg shadow-black/5 flex flex-col">
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-3xl font-semibold text-zinc-900">Today&apos;s Tasks</h2>
-              <button
-                onClick={() => setIsAddTasksModalOpen(true)}
-                className={`rounded-lg p-1.5 ${colorPalette.text} transition-colors ${colorPalette.accentLight.replace('bg-', 'hover:bg-')}`}
-                title="Add tasks from task lists"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className="h-4 w-4"
-                >
-                  <path d="M3 4.25A2.25 2.25 0 0 1 5.25 2h5.5A2.25 2.25 0 0 1 13 4.25v2a.75.75 0 0 1-1.5 0v-2a.75.75 0 0 0-.75-.75h-5.5a.75.75 0 0 0-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 0 0 .75-.75v-2a.75.75 0 0 1 1.5 0v2A2.25 2.25 0 0 1 10.75 18h-5.5A2.25 2.25 0 0 1 3 15.75V4.25Z" />
-                  <path d="M19 10a.75.75 0 0 0-.75-.75H8.704l1.048-.943a.75.75 0 1 0-1.004-1.114l-2.5 2.25a.75.75 0 0 0 0 1.114l2.5 2.25a.75.75 0 1 0 1.004-1.114l-1.048-.943h9.546A.75.75 0 0 0 19 10Z" />
-                </svg>
-              </button>
-            </div>
+        <div className="flex-[2] rounded-2xl border border-black/5 bg-white/90 p-6 shadow-lg shadow-black/5 flex flex-col min-h-0">
+          <div className="mb-4 flex-shrink-0">
+            <h2 className="text-2xl font-semibold text-violet-900">Today&apos;s List</h2>
           </div>
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto mb-4 min-h-0">
             {todayTasks.length === 0 ? (
-              <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-zinc-200 bg-zinc-50 p-8 text-center">
-                <p className="text-sm text-zinc-500">
-                  No tasks for today. Add tasks from your task lists to get started!
+              <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-violet-200 bg-violet-50/50 p-8 text-center">
+                <p className="text-sm text-violet-600/60">
+                  No tasks for today. Add some tasks to get started!
                 </p>
               </div>
             ) : (
@@ -656,29 +631,29 @@ export default function HyperactivePage() {
                 {todayTasks.map((task) => (
                   <li
                     key={task.id}
-                    className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-white p-3 transition-colors hover:bg-zinc-50"
+                    className="flex items-center gap-3 rounded-xl border border-violet-200 bg-white p-3 transition-colors hover:bg-violet-50/50"
                   >
                     <input
                       type="checkbox"
                       checked={task.done}
                       onChange={() => handleTaskToggle(task.id)}
-                      className="h-4 w-4 cursor-pointer rounded border-zinc-300 text-violet-600 focus:ring-violet-500"
+                      className="h-4 w-4 cursor-pointer rounded border-violet-300 text-violet-600 focus:ring-violet-500"
                     />
                     <div className="flex-1 min-w-0">
                       <p
-                        className={`text-sm truncate ${
-                          task.done ? "line-through text-zinc-400" : "text-zinc-900"
+                        className={`text-base break-words ${
+                          task.done ? "line-through text-violet-400" : "text-violet-900"
                         }`}
                       >
                         {task.text}
                       </p>
                       {task.sourceListName && (
-                        <p className="mt-1 text-xs text-zinc-500">from {task.sourceListName}</p>
+                        <p className="mt-1 text-xs text-violet-500">from {task.sourceListName}</p>
                       )}
                     </div>
                     <button
                       onClick={() => handleRemoveTask(task.id)}
-                      className="flex-shrink-0 rounded p-1 text-zinc-400 transition-colors hover:text-red-500"
+                      className="flex-shrink-0 rounded p-1 text-violet-400 transition-colors hover:text-red-500"
                       aria-label="Remove task"
                     >
                       <svg
@@ -700,83 +675,70 @@ export default function HyperactivePage() {
             )}
           </div>
 
-          {/* Input area with Add and Break Task buttons */}
-          <div className={`mt-4 border-t border-zinc-200 pt-4 flex items-start gap-3 rounded-2xl border ${colorPalette.border} bg-white/80 p-3`}>
-            <textarea
+          {/* Input area */}
+          <div className="flex-shrink-0 border-t border-violet-200/50 pt-4 flex items-center gap-2">
+            <input
               ref={inputRef}
+              type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              rows={2}
-              placeholder="Type a task... (Enter = add, Shift+Enter = break)"
-              className={`flex-1 resize-none rounded-2xl border ${colorPalette.border} bg-white/80 p-3 text-sm ${colorPalette.text} ${colorPalette.borderLight.replace('border-', 'focus:border-')} focus:outline-none`}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addTask(input);
+                }
+              }}
+              placeholder="Add task..."
+              className="flex-1 rounded-lg border border-violet-200 bg-white px-3 py-2 text-sm text-violet-900 placeholder:text-violet-400 focus:border-violet-500 focus:outline-none"
             />
-
-            <div className="flex flex-col gap-3 px-1">
-              <button
-                onClick={() => addTask(input)}
-                className={`rounded-2xl ${colorPalette.accent} px-4 py-2 text-sm font-semibold text-white shadow-sm transition ${colorPalette.accentHover} focus:outline-none`}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-5">
-                  <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
-                </svg>
-              </button>
-              <button
-                onClick={() => handleBreakTasks(input)} 
-                disabled={isBreaking}
-                title={isBreaking ? "Breaking down task..." : "Break down task using AI"}
-                className={`rounded-2xl border ${colorPalette.borderLight} px-4 py-2 text-sm font-semibold ${colorPalette.text} transition ${colorPalette.accentLight.replace('bg-', 'hover:bg-')} disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-5">
-                  <path d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684ZM13.949 13.684a1 1 0 0 0-1.898 0l-.184.551a1 1 0 0 1-.632.633l-.551.183a1 1 0 0 0 0 1.898l.551.183a1 1 0 0 1 .633.633l.183.551a1 1 0 0 0 1.898 0l.184-.551a1 1 0 0 1 .632-.633l.551-.183a1 1 0 0 0 0-1.898l-.551-.184a1 1 0 0 1-.633-.632l-.183-.551Z" />
-                </svg>
-              </button>
-            </div>
+            <button
+              onClick={() => addTask(input)}
+              className={`rounded-lg ${colorPalette.accent} px-3 py-2 text-sm font-medium text-white transition ${colorPalette.accentHover}`}
+            >
+              Add
+            </button>
+            <button
+              onClick={() => handleBreakTasks(input)}
+              disabled={isBreaking}
+              className="rounded-lg border border-violet-200 bg-white px-3 py-2 text-sm font-medium text-violet-900 transition-colors hover:bg-violet-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Break down task using AI"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-4">
+                <path d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684ZM13.949 13.684a1 1 0 0 0-1.898 0l-.184.551a1 1 0 0 1-.632.633l-.551.183a1 1 0 0 0 0 1.898l.551.183a1 1 0 0 1 .633.633l.183.551a1 1 0 0 0 1.898 0l.184-.551a1 1 0 0 1 .632-.633l.551-.183a1 1 0 0 0 0-1.898l-.551-.184a1 1 0 0 1-.633-.632l-.183-.551Z" />
+              </svg>
+            </button>
           </div>
         </div>
 
-        {/* Right Column - Task List Progress */}
+        {/* Right Column - Progress */}
         <div className="flex-1 rounded-2xl border border-black/5 bg-white/90 p-6 shadow-lg shadow-black/5 flex flex-col overflow-y-auto">
           <div className="mb-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-zinc-900">Task List Progress</h2>
-              <Link
-                href="/tasks?mode=hyperactive"
-                className="flex items-center justify-center rounded-lg p-1.5 bg-white border-2 border-violet-600 text-violet-600 transition-colors hover:bg-violet-50"
-                title="Task Manager"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" className="h-4 w-4">
-                  <path d="M152.1 38.2c9.9 8.9 10.7 24 1.8 33.9l-72 80c-4.4 4.9-10.6 7.8-17.2 7.9s-12.9-2.4-17.6-7L7 113C-2.3 103.6-2.3 88.4 7 79s24.6-9.4 33.9 0l22.1 22.1 55.1-61.2c8.9-9.9 24-10.7 33.9-1.8zm0 160c9.9 8.9 10.7 24 1.8 33.9l-72 80c-4.4 4.9-10.6 7.8-17.2 7.9s-12.9-2.4-17.6-7L7 273c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l22.1 22.1 55.1-61.2c8.9-9.9 24-10.7 33.9-1.8zM224 96c0-17.7 14.3-32 32-32H480c17.7 0 32 14.3 32 32s-14.3 32-32 32H256c-17.7 0-32-14.3-32-32zm0 160c0-17.7 14.3-32 32-32H480c17.7 0 32 14.3 32 32s-14.3 32-32 32H256c-17.7 0-32-14.3-32-32zM160 416c0-17.7 14.3-32 32-32H480c17.7 0 32 14.3 32 32s-14.3 32-32 32H192c-17.7 0-32-14.3-32-32zM48 368a48 48 0 1 1 0 96 48 48 0 1 1 0-96z"/>
-                </svg>
-              </Link>
-            </div>
-            <p className="mt-1 text-xs text-zinc-600">
-              Completion rate by list
-            </p>
+            <h2 className="text-xl font-semibold text-zinc-900">Progress</h2>
           </div>
 
-          <div className="space-y-4 flex-1">
+          <div className="space-y-3 flex-1">
             {listProgress.length === 0 ? (
-              <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-zinc-200 bg-zinc-50 p-8 text-center">
-                <p className="text-sm text-zinc-500">
+              <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-violet-200 bg-violet-50/50 p-8 text-center">
+                <p className="text-sm text-violet-600/60">
                   No task lists yet. Create one in Task Manager!
                 </p>
               </div>
             ) : (
               listProgress.map((list, index) => (
-                <div key={index} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-zinc-900 truncate">{list.name}</p>
-                    <span className="text-xs text-zinc-600 ml-2">
-                      {list.completed}/{list.total}
-                    </span>
+                <div
+                  key={index}
+                  className="rounded-xl border border-violet-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow"
+                >
+                  <h4 className="text-base font-semibold text-violet-900 mb-3 truncate">{list.name}</h4>
+                  <div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-violet-200/30">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-violet-500 to-rose-500 transition-all duration-500"
+                        style={{ width: `${list.rate}%` }}
+                      />
+                    </div>
+                    <p className="text-sm text-violet-600/60 mt-1">{list.completed}/{list.total} tasks</p>
                   </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-200">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-orange-400 to-rose-500 transition-all duration-500"
-                      style={{ width: `${list.rate}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-zinc-500">{Math.round(list.rate)}% complete</p>
                 </div>
               ))
             )}

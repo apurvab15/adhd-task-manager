@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import TaskListDrawer, { type ColorPalette, violetPalette } from "./TaskListDrawer";
-import { awardXPForTask, revokeXPForTaskCompletion, penalizeXPForUncompletedTask } from "@/utils/gamification";
+import { awardXPForTask, revokeXPForTaskCompletion, penalizeXPForUncompletedTask, awardXPForTaskListCompletion } from "@/utils/gamification";
 import { useTaskBreaker } from "@/hooks/useTaseBreaking";
 import BreakTasksModal from "./BreakTasksModal";
 
@@ -248,11 +248,50 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
 
                 // Handle gamification: award XP when checking, revoke when unchecking
                 if (newDone && !task.done) {
-                    // Marking as done – award XP
-                    awardXPForTask();
+                    // Marking as done – award XP (5 points in hyperactive mode)
+                    if (mode === "hyperactive") {
+                        awardXPForTask();
+                    }
                 } else if (!newDone && task.done) {
                     // Unchecking a completed task – revoke XP
-                    revokeXPForTaskCompletion();
+                    if (mode === "hyperactive") {
+                        revokeXPForTaskCompletion();
+                    }
+                }
+
+                // Check if task list is completed (only in hyperactive mode)
+                if (mode === "hyperactive" && newDone && currentList) {
+                    const updatedList = {
+                        ...currentList,
+                        tasks: currentList.tasks.map((t) =>
+                            t.id === taskId ? { ...t, done: newDone } : t
+                        ),
+                    };
+                    const allTasksDone = updatedList.tasks.length > 0 && updatedList.tasks.every((t) => t.done);
+                    
+                    if (allTasksDone) {
+                        // Check if we've already awarded XP for this completion
+                        const completedListsKey = `adhd-completed-lists-${mode}`;
+                        const completedLists = JSON.parse(
+                            window.localStorage.getItem(completedListsKey) || "[]"
+                        ) as number[];
+                        
+                        if (!completedLists.includes(currentListId)) {
+                            // Award 10 points for completing the list
+                            awardXPForTaskListCompletion();
+                            // Mark this list as completed
+                            completedLists.push(currentListId);
+                            window.localStorage.setItem(completedListsKey, JSON.stringify(completedLists));
+                        }
+                    } else {
+                        // If list is no longer complete, remove it from completed lists
+                        const completedListsKey = `adhd-completed-lists-${mode}`;
+                        const completedLists = JSON.parse(
+                            window.localStorage.getItem(completedListsKey) || "[]"
+                        ) as number[];
+                        const filtered = completedLists.filter((id) => id !== currentListId);
+                        window.localStorage.setItem(completedListsKey, JSON.stringify(filtered));
+                    }
                 }
 
                 // Notify listeners that gamification stats changed

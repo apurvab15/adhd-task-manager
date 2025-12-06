@@ -1,5 +1,8 @@
 const XP_STORAGE_KEY = "adhd-task-manager-xp";
-const XP_PER_TASK = 10;
+const XP_PER_TASK = 5; // XP for ticking items in hyperactive mode
+const XP_FOR_BREAKING_TASK = 10;
+const XP_FOR_FOCUS_MODE = 10;
+const XP_FOR_TASK_LIST_COMPLETION = 10;
 const XP_PER_LEVEL = 100; // XP needed per level
 
 export type UserStats = {
@@ -158,5 +161,64 @@ export function penalizeXPForUncompletedTask(): UserStats {
 export function getProgressPercentage(stats: UserStats): number {
   if (stats.xpToNextLevel === XP_PER_LEVEL) return 0;
   return ((XP_PER_LEVEL - stats.xpToNextLevel) / XP_PER_LEVEL) * 100;
+}
+
+/**
+ * Award XP for breaking a task (10 points)
+ */
+export function awardXPForBreakingTask(): UserStats {
+  const stats = getStats();
+  stats.totalXP += XP_FOR_BREAKING_TASK;
+
+  const { level, currentLevelXP, xpToNextLevel } = calculateLevel(stats.totalXP);
+  stats.level = level;
+  stats.currentLevelXP = currentLevelXP;
+  stats.xpToNextLevel = xpToNextLevel;
+
+  saveStats(stats);
+  return stats;
+}
+
+/**
+ * Award XP for going to focus mode (10 points)
+ */
+export function awardXPForFocusMode(): UserStats {
+  const stats = getStats();
+  stats.totalXP += XP_FOR_FOCUS_MODE;
+
+  const { level, currentLevelXP, xpToNextLevel } = calculateLevel(stats.totalXP);
+  stats.level = level;
+  stats.currentLevelXP = currentLevelXP;
+  stats.xpToNextLevel = xpToNextLevel;
+
+  saveStats(stats);
+  return stats;
+}
+
+/**
+ * Award XP for completing a task list (10 points)
+ */
+export function awardXPForTaskListCompletion(): UserStats {
+  const stats = getStats();
+  stats.totalXP += XP_FOR_TASK_LIST_COMPLETION;
+
+  const { level, currentLevelXP, xpToNextLevel } = calculateLevel(stats.totalXP);
+  stats.level = level;
+  stats.currentLevelXP = currentLevelXP;
+  stats.xpToNextLevel = xpToNextLevel;
+
+  saveStats(stats);
+  return stats;
+}
+
+/**
+ * Get emoji based on level
+ */
+export function getLevelEmoji(level: number): string {
+  if (level >= 20) return "🏆";
+  if (level >= 15) return "⭐";
+  if (level >= 10) return "🌟";
+  if (level >= 5) return "✨";
+  return "🎯";
 }
 

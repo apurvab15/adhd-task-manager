@@ -419,7 +419,7 @@ export default function CombinedPage() {
     <div className="h-screen overflow-hidden bg-gradient-to-br from-[#EFEFD0] via-[#F7C59F]/20 to-[#EFEFD0] flex flex-col">
       {/* Navigation Bar */}
       <nav className="flex-shrink-0 border-b border-[#004E89]/10 bg-white/90 backdrop-blur-sm">
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center gap-4 px-4 py-3">
           <Link href="/combined" className="flex items-center gap-2 text-[#004E89] transition-colors hover:text-[#1A659E]">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -435,6 +435,22 @@ export default function CombinedPage() {
             </svg>
             <span className="text-lg font-semibold">Dynamic Worker</span>
           </Link>
+          {/* Progress Bar */}
+          <div className="flex-1 flex items-center gap-3">
+            {totalToday > 0 ? (
+              <>
+                <div className="flex-1 h-2 overflow-hidden rounded-full bg-[#F7C59F]/30">
+                  <div
+                    className="h-full rounded-full bg-[#FF6B35] transition-all duration-500"
+                    style={{ width: `${(completedToday / totalToday) * 100}%` }}
+                  />
+                </div>
+                <span className="text-sm font-medium text-[#1A659E] whitespace-nowrap">{completedToday}/{totalToday}</span>
+              </>
+            ) : (
+              <p className="text-sm font-medium text-[#004E89]">Let&apos;s get started for today, set our goals!</p>
+            )}
+          </div>
           <div className="flex items-center gap-3">
             {/* Chaos/Calm Toggle */}
             <div className="flex items-center rounded-full border-2 border-[#004E89]/30 bg-white/80 p-1 shadow-sm">
@@ -482,28 +498,6 @@ export default function CombinedPage() {
           </div>
         </div>
       </nav>
-
-      {/* Progress Bar */}
-      <div className="flex-shrink-0 border-b border-[#004E89]/10 bg-white/50 px-4 py-3">
-        {totalToday > 0 ? (
-          <>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-[#004E89]">Today&apos;s Progress</span>
-              <span className="text-sm font-medium text-[#1A659E]">{completedToday}/{totalToday}</span>
-            </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-[#F7C59F]/30">
-              <div
-                className="h-full rounded-full bg-[#FF6B35] transition-all duration-500"
-                style={{ width: `${(completedToday / totalToday) * 100}%` }}
-              />
-            </div>
-          </>
-        ) : (
-          <div className="text-center py-2">
-            <p className="text-sm font-medium text-[#004E89]">Let&apos;s get started for today, set our goals!</p>
-          </div>
-        )}
-      </div>
 
       {/* Main Layout */}
       <main className="flex-1 flex gap-4 p-4 overflow-hidden min-h-0">
