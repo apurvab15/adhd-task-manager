@@ -1,14 +1,26 @@
 "use client";
 
-import { Suspense } from "react";
-import { useState } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import TaskListWindow from "@/components/TaskList";
 import FocusModeModal from "@/components/FocusModeModal";
-import { violetPalette, periwinklePalette, type ColorPalette } from "@/components/TaskListDrawer";
+import BreakTasksModal from "@/components/BreakTasksModal";
+import { violetPalette, periwinklePalette, combinedPalette, type ColorPalette } from "@/components/TaskListDrawer";
+import { useTaskBreaker } from "@/hooks/useTaseBreaking";
 
 type Mode = "inattentive" | "hyperactive" | "combined";
+
+type Task = {
+  id: number;
+  text: string;
+  done: boolean;
+};
+
+type TaskList = {
+  id: number;
+  name: string;
+  tasks: Task[];
+};
 
 export default function TasksPage() {
   return (
@@ -24,59 +36,352 @@ export function TasksPageData() {
   const mode: Mode = (modeParam === "inattentive" || modeParam === "hyperactive" || modeParam === "combined") 
     ? modeParam 
     : "hyperactive";
-  // For combined mode, default to hyperactive palette (or you could use a different one)
-  const colorPalette: ColorPalette = mode === "inattentive" ? periwinklePalette : violetPalette;
   
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const colorPalette: ColorPalette = 
+    mode === "inattentive" ? periwinklePalette :
+    mode === "combined" ? combinedPalette :
+    violetPalette;
+  
+  const [isFocusModalOpen, setIsFocusModalOpen] = useState(false);
+  const [taskLists, setTaskLists] = useState<TaskList[]>([]);
+  const [currentListId, setCurrentListId] = useState<number | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
+  const [input, setInput] = useState("");
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editingTitle, setEditingTitle] = useState("");
+  const [isBreakTasksModalOpen, setIsBreakTasksModalOpen] = useState(false);
+  const [brokenTasks, setBrokenTasks] = useState<string[]>([]);
+  const [originalTaskText, setOriginalTaskText] = useState<string>("");
+  
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const titleInputRef = useRef<HTMLInputElement | null>(null);
+  const nextTaskId = useRef(1);
+  const nextListId = useRef(1);
+  const { breakTask, isBreaking } = useTaskBreaker(mode);
 
-  // Helper function to create links with mode parameter
-  const createLink = (path: string) => {
-    return `${path}?mode=${mode}`;
+  const getStorageKey = () => {
+    if (mode === "inattentive") return "adhd-task-lists-inattentive";
+    if (mode === "hyperactive") return "adhd-task-lists-hyperactive";
+    return "adhd-task-lists-combined";
   };
+
+  // Load data from localStorage
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const storageKey = getStorageKey();
+      const saved = window.localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved) as TaskList[];
+        if (parsed.length > 0) {
+          setTaskLists(parsed);
+          setCurrentListId(parsed[0].id);
+          const maxListId = Math.max(...parsed.map((list) => list.id));
+          nextListId.current = maxListId + 1;
+          const allTasks = parsed.flatMap((list) => list.tasks);
+          if (allTasks.length > 0) {
+            const maxTaskId = Math.max(...allTasks.map((task) => task.id));
+            nextTaskId.current = maxTaskId + 1;
+          }
+        } else {
+          // Create a default list if none exist
+          const defaultList: TaskList = {
+            id: 1,
+            name: "My Tasks",
+            tasks: [],
+          };
+          setTaskLists([defaultList]);
+          setCurrentListId(1);
+          nextListId.current = 2;
+        }
+      } else {
+        // Create a default list if none exist
+        const defaultList: TaskList = {
+          id: 1,
+          name: "My Tasks",
+          tasks: [],
+        };
+        setTaskLists([defaultList]);
+        setCurrentListId(1);
+        nextListId.current = 2;
+      }
+    } catch (error) {
+      console.error("Error loading data:", error);
+      // Create a default list on error
+      const defaultList: TaskList = {
+        id: 1,
+        name: "My Tasks",
+        tasks: [],
+      };
+      setTaskLists([defaultList]);
+      setCurrentListId(1);
+      nextListId.current = 2;
+    }
+
+    setIsHydrated(true);
+  }, [mode]);
+
+  // Save task lists to localStorage
+  useEffect(() => {
+    if (!isHydrated || typeof window === "undefined") return;
+    const storageKey = getStorageKey();
+    window.localStorage.setItem(storageKey, JSON.stringify(taskLists));
+    // Dispatch event to notify other pages of changes
+    window.dispatchEvent(new CustomEvent("taskListUpdated"));
+  }, [taskLists, isHydrated, mode]);
+
+  // Ensure currentListId is valid
+  useEffect(() => {
+    if (taskLists.length > 0 && (!currentListId || !taskLists.some((list) => list.id === currentListId))) {
+      setCurrentListId(taskLists[0].id);
+    }
+  }, [taskLists, currentListId]);
+
+  const currentList = taskLists.find((list) => list.id === currentListId) || taskLists[0];
 
   // Get home URL based on mode
   const getHomeUrl = () => {
     if (mode === "inattentive") return "/inattentive";
     if (mode === "hyperactive") return "/hyperactive";
     if (mode === "combined") return "/combined";
-    return createLink("/home");
+    return "/home";
   };
 
+  // Task list management
+  const createNewList = () => {
+    const newList: TaskList = {
+      id: nextListId.current++,
+      name: `Task List ${taskLists.length + 1}`,
+      tasks: [],
+    };
+    setTaskLists((lists) => [...lists, newList]);
+    setCurrentListId(newList.id);
+  };
+
+  const deleteList = (listId: number) => {
+    if (taskLists.length <= 1) {
+      // Don't allow deleting the last list
+      return;
+    }
+    setTaskLists((lists) => {
+      const filtered = lists.filter((list) => list.id !== listId);
+      // If we deleted the current list, switch to the first remaining list
+      if (listId === currentListId && filtered.length > 0) {
+        setCurrentListId(filtered[0].id);
+      }
+      return filtered;
+    });
+  };
+
+  const selectList = (listId: number) => {
+    setCurrentListId(listId);
+  };
+
+  // Task management
+  const addTask = (text: string) => {
+    const t = text.trim();
+    if (!t || !currentListId) return;
+    const newTask: Task = { id: nextTaskId.current++, text: t, done: false };
+    setTaskLists((lists) =>
+      lists.map((list) =>
+        list.id === currentListId
+          ? { ...list, tasks: [...list.tasks, newTask] }
+          : list
+      )
+    );
+    setInput("");
+    inputRef.current?.focus();
+  };
+
+  const handleBreakTasks = async (text: string) => {
+    const taskText = text.trim();
+    if (!taskText) return;
+    
+    setOriginalTaskText(taskText);
+    setIsBreakTasksModalOpen(true);
+    
+    try {
+      const subTasks = await breakTask(taskText, mode);
+      if (subTasks && subTasks.length === 0) {
+        setIsBreakTasksModalOpen(false);
+        alert("No sub-tasks were generated. Please try again.");
+        return;
+      }
+      setBrokenTasks(subTasks || []);
+    } catch (error) {
+      console.error("Error breaking down task:", error);
+      setIsBreakTasksModalOpen(false);
+      alert(error instanceof Error ? error.message : "Failed to break down task. Please try again.");
+    }
+  };
+
+  const handleDiscardBrokenTasks = () => {
+    setBrokenTasks([]);
+    setOriginalTaskText("");
+    setIsBreakTasksModalOpen(false);
+    setInput("");
+    inputRef.current?.focus();
+  };
+
+  const handleAddBrokenTasks = (brokenTasksList: Array<{ id: number; text: string }>) => {
+    if (brokenTasksList.length === 0 || !currentListId) return;
+
+    const validTasks = brokenTasksList.filter((t) => t.text.trim() !== "");
+    if (validTasks.length === 0) return;
+
+    // Generate unique IDs for tasks
+    const tasksWithIds = validTasks.map((task) => ({
+      id: nextTaskId.current++,
+      text: task.text.trim(),
+      done: false,
+    }));
+
+    setTaskLists((lists) =>
+      lists.map((list) =>
+        list.id === currentListId
+          ? { ...list, tasks: [...list.tasks, ...tasksWithIds] }
+          : list
+      )
+    );
+
+    // Clean up
+    setBrokenTasks([]);
+    setOriginalTaskText("");
+    setIsBreakTasksModalOpen(false);
+    setInput("");
+    inputRef.current?.focus();
+  };
+
+  const toggleDone = (taskId: number) => {
+    if (!currentListId) return;
+    setTaskLists((lists) =>
+      lists.map((list) =>
+        list.id === currentListId
+          ? {
+              ...list,
+              tasks: list.tasks.map((t) =>
+                t.id === taskId ? { ...t, done: !t.done } : t
+              ),
+            }
+          : list
+      )
+    );
+  };
+
+  const removeTask = (taskId: number) => {
+    if (!currentListId) return;
+    setTaskLists((lists) =>
+      lists.map((list) =>
+        list.id === currentListId
+          ? { ...list, tasks: list.tasks.filter((t) => t.id !== taskId) }
+          : list
+      )
+    );
+  };
+
+  // Title editing
+  const startEditingTitle = () => {
+    if (currentList) {
+      setEditingTitle(currentList.name);
+      setIsEditingTitle(true);
+      setTimeout(() => titleInputRef.current?.focus(), 0);
+    }
+  };
+
+  const saveTitle = () => {
+    if (!currentListId) return;
+    const trimmed = editingTitle.trim();
+    if (trimmed) {
+      setTaskLists((lists) =>
+        lists.map((list) =>
+          list.id === currentListId ? { ...list, name: trimmed } : list
+        )
+      );
+    }
+    setIsEditingTitle(false);
+  };
+
+  const cancelEditingTitle = () => {
+    setIsEditingTitle(false);
+    setEditingTitle("");
+  };
+
+  // Calculate progress for a list
+  const getProgress = (list: TaskList) => {
+    if (list.tasks.length === 0) return 0;
+    const completed = list.tasks.filter((t) => t.done).length;
+    return (completed / list.tasks.length) * 100;
+  };
+
+  if (!isHydrated) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-lg text-gray-600">Loading...</div>
+      </div>
+    );
+  }
+
+  // Background and styling based on mode
+  const backgroundClass = mode === "combined" 
+    ? "bg-gradient-to-br from-[#EFEFD0] via-[#F7C59F]/20 to-[#EFEFD0]"
+    : "bg-gradient-to-br from-slate-50 via-white to-slate-100";
+  
+  const navBorderClass = mode === "combined"
+    ? "border-[#004E89]/10"
+    : "border-black/5";
+
+  const navTextClass = mode === "combined"
+    ? "text-[#004E89]"
+    : "text-gray-900";
+
+  const columnBgClass = mode === "combined"
+    ? "bg-white/90"
+    : "bg-white/90";
+
+  const columnBorderClass = mode === "combined"
+    ? "border-[#004E89]/20"
+    : "border-gray-200";
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
+    <div className={`h-screen overflow-hidden ${backgroundClass} flex flex-col`}>
       {/* Navigation Bar */}
-      <nav className="border-b border-black/5 bg-white/80 backdrop-blur-sm">
+      <nav className={`flex-shrink-0 border-b ${navBorderClass} bg-white/90 backdrop-blur-sm`}>
         <div className="flex items-center justify-between px-4 py-3">
-          <Link
-            href={getHomeUrl()}
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              className="h-4 w-4"
-            >
-              <path
-                fillRule="evenodd"
-                d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08l-4.158 3.96H16.25A.75.75 0 0 1 17 10Z"
-                clipRule="evenodd"
-              />
+          {/* Left side - Task Manager icon + text */}
+          <div className="flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" className={`h-6 w-6 ${navTextClass}`}>
+              <path d="M152.1 38.2c9.9 8.9 10.7 24 1.8 33.9l-72 80c-4.4 4.9-10.6 7.8-17.2 7.9s-12.9-2.4-17.6-7L7 113C-2.3 103.6-2.3 88.4 7 79s24.6-9.4 33.9 0l22.1 22.1 55.1-61.2c8.9-9.9 24-10.7 33.9-1.8zm0 160c9.9 8.9 10.7 24 1.8 33.9l-72 80c-4.4 4.9-10.6 7.8-17.2 7.9s-12.9-2.4-17.6-7L7 273c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l22.1 22.1 55.1-61.2c8.9-9.9 24-10.7 33.9-1.8zM224 96c0-17.7 14.3-32 32-32H480c17.7 0 32 14.3 32 32s-14.3 32-32 32H256c-17.7 0-32-14.3-32-32zm0 160c0-17.7 14.3-32 32-32H480c17.7 0 32 14.3 32 32s-14.3 32-32 32H256c-17.7 0-32-14.3-32-32zM160 416c0-17.7 14.3-32 32-32H480c17.7 0 32 14.3 32 32s-14.3 32-32 32H192c-17.7 0-32-14.3-32-32zM48 368a48 48 0 1 1 0 96 48 48 0 1 1 0-96z"/>
             </svg>
-            Back to Home
-          </Link>
-          <div className="flex items-center gap-4">
+            <span className={`text-lg font-semibold ${navTextClass}`}>Task Manager</span>
+          </div>
+          
+          {/* Right side - Home + Focus Mode button */}
+          <div className="flex items-center gap-3">
             <Link
               href={getHomeUrl()}
-              className="flex items-center justify-center rounded-lg p-2 bg-white border-2 border-zinc-900 text-zinc-900 transition-colors hover:bg-zinc-50"
-              title="Task Manager"
+              className={`flex items-center justify-center rounded-lg p-2 bg-white border-2 ${
+                mode === "combined" 
+                  ? "border-[#004E89] text-[#004E89] hover:bg-[#F7C59F]/10"
+                  : "border-gray-900 text-gray-900 hover:bg-gray-50"
+              } transition-colors`}
+              title="Home"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" className="h-5 w-5">
-                <path d="M152.1 38.2c9.9 8.9 10.7 24 1.8 33.9l-72 80c-4.4 4.9-10.6 7.8-17.2 7.9s-12.9-2.4-17.6-7L7 113C-2.3 103.6-2.3 88.4 7 79s24.6-9.4 33.9 0l22.1 22.1 55.1-61.2c8.9-9.9 24-10.7 33.9-1.8zm0 160c9.9 8.9 10.7 24 1.8 33.9l-72 80c-4.4 4.9-10.6 7.8-17.2 7.9s-12.9-2.4-17.6-7L7 273c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l22.1 22.1 55.1-61.2c8.9-9.9 24-10.7 33.9-1.8zM224 96c0-17.7 14.3-32 32-32H480c17.7 0 32 14.3 32 32s-14.3 32-32 32H256c-17.7 0-32-14.3-32-32zm0 160c0-17.7 14.3-32 32-32H480c17.7 0 32 14.3 32 32s-14.3 32-32 32H256c-17.7 0-32-14.3-32-32zM160 416c0-17.7 14.3-32 32-32H480c17.7 0 32 14.3 32 32s-14.3 32-32 32H192c-17.7 0-32-14.3-32-32zM48 368a48 48 0 1 1 0 96 48 48 0 1 1 0-96z"/>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                className="h-4 w-4"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M9.293 2.293a1 1 0 0 1 1.414 0l7 7A1 1 0 0 1 17 11h-1v6a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-6H3a1 1 0 0 1-.707-1.707l7-7Z"
+                  clipRule="evenodd"
+                />
               </svg>
             </Link>
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => setIsFocusModalOpen(true)}
               className={`flex items-center justify-center rounded-lg p-2 ${colorPalette.accent} text-white transition-colors ${colorPalette.accentHover}`}
               title="Focus Mode"
             >
@@ -88,28 +393,300 @@ export function TasksPageData() {
         </div>
       </nav>
 
-      <main className="mx-auto flex min-h-[calc(100vh-73px)] w-full max-w-7xl flex-col gap-8 px-4 py-2 sm:px-6 lg:px-8">
-        <section className="flex items-start justify-between">
-          <div className="space-y-2">
-            <h3 className="text-2xl font-semibold text-zinc-900 sm:text-3xl">
-              Task Manager
-            </h3>
-            <p className="text-lg text-zinc-600">
-              Organize your tasks across multiple lists. Create, edit, and manage your to-dos with ease.
-            </p>
+      {/* Main Layout - Two Columns */}
+      <main className="flex-1 flex gap-4 p-4 overflow-hidden min-h-0">
+        {/* Left Column - Task Lists (30%) */}
+        <div className={`w-[30%] rounded-2xl border ${columnBorderClass} ${columnBgClass} p-4 shadow-lg flex flex-col min-h-0`}>
+          <div className="mb-4 flex-shrink-0">
+            <h2 className={`text-lg font-semibold ${mode === "combined" ? "text-[#004E89]" : "text-gray-900"}`}>Task Lists</h2>
           </div>
-        </section>
 
-        <div className="flex-1">
-          <TaskListWindow 
-            mode={mode} 
-            colorPalette={colorPalette}
-          />
+          {/* Scrollable list of task list cards */}
+          <div className="flex-1 overflow-y-auto mb-4 min-h-0 space-y-3">
+            {taskLists.map((list) => {
+              const progress = getProgress(list);
+              const completedCount = list.tasks.filter((t) => t.done).length;
+              const totalCount = list.tasks.length;
+              const isSelected = list.id === currentListId;
+
+              return (
+                <div
+                  key={list.id}
+                  onClick={() => selectList(list.id)}
+                  className={`rounded-xl border-2 p-4 cursor-pointer transition-all ${
+                    isSelected
+                      ? mode === "combined"
+                        ? "border-[#004E89]/30 bg-white shadow-md"
+                        : `${colorPalette.borderLight} ${colorPalette.activeBg} shadow-md`
+                      : mode === "combined"
+                      ? "border-[#004E89]/20 bg-white hover:border-[#004E89]/30 hover:shadow-md"
+                      : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className={`font-semibold text-sm flex-1 truncate ${
+                      isSelected 
+                        ? mode === "combined" 
+                          ? "text-[#004E89]" 
+                          : colorPalette.textDark 
+                        : mode === "combined"
+                        ? "text-[#004E89]"
+                        : "text-gray-900"
+                    }`}>
+                      {list.name}
+            </h3>
+                    {taskLists.length > 1 && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteList(list.id);
+                        }}
+                        className="flex-shrink-0 ml-2 p-1 rounded text-gray-400 hover:text-red-500 transition-colors"
+                        title="Delete list"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                          className="h-4 w-4"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                  {/* Progress Bar */}
+                  <div className="space-y-1">
+                    <div className={`h-2 w-full overflow-hidden rounded-full ${
+                      mode === "combined" ? "bg-[#F7C59F]/30" : "bg-gray-200"
+                    }`}>
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          mode === "combined"
+                            ? "bg-[#FF6B35]"
+                            : isSelected 
+                            ? colorPalette.accent 
+                            : "bg-gray-400"
+                        }`}
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                    <p className={`text-xs ${
+                      mode === "combined" ? "text-[#004E89]/60" : "text-gray-500"
+                    }`}>
+                      {completedCount}/{totalCount} tasks
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Add New List Button */}
+          <button
+            onClick={createNewList}
+            className={`flex-shrink-0 flex items-center justify-center gap-2 rounded-xl ${colorPalette.accent} px-4 py-2 font-medium text-white transition-colors ${colorPalette.accentHover}`}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className="w-5 h-5"
+            >
+              <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+            </svg>
+            Add New List
+          </button>
         </div>
 
-        <FocusModeModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} mode={mode} />
+        {/* Right Column - Selected Task List (70%) */}
+        <div className={`flex-1 rounded-2xl border ${columnBorderClass} ${columnBgClass} p-6 shadow-lg flex flex-col min-h-0`}>
+          {currentList ? (
+            <>
+              {/* Editable title with pencil icon */}
+              <div className="flex items-center mb-4 flex-shrink-0">
+                {isEditingTitle ? (
+                  <div className="flex items-center gap-2 flex-1">
+                    <input
+                      ref={titleInputRef}
+                      type="text"
+                      value={editingTitle}
+                      onChange={(e) => setEditingTitle(e.target.value)}
+                      onBlur={saveTitle}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          saveTitle();
+                        } else if (e.key === "Escape") {
+                          cancelEditingTitle();
+                        }
+                      }}
+                      className={`flex-1 text-xl font-semibold ${colorPalette.textDark} bg-transparent border-b-2 ${colorPalette.accent.replace('bg-', 'border-')} focus:outline-none px-1`}
+                    />
+                  </div>
+                ) : (
+                  <div className={`flex items-center gap-2 ${colorPalette.textDark}`}>
+                    <h2 className={`text-xl font-semibold ${colorPalette.textDark}`}>{currentList.name}</h2>
+                    <button
+                      onClick={startEditingTitle}
+                      className={`p-1 rounded ${colorPalette.text} ${colorPalette.accentLight.replace('bg-', 'hover:bg-')} transition-colors`}
+                      title="Edit title"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        className="w-4 h-4"
+                      >
+                        <path d="m2.695 14.762-1.262 3.155a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.886L17.5 5.5a2.121 2.121 0 0 0-3-3L3.58 13.419a4 4 0 0 0-.885 1.343Z" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Scrollable task list */}
+              <div className="flex-1 overflow-y-auto mb-4 min-h-0">
+                {currentList.tasks.length === 0 ? (
+                  <div className={`flex h-full items-center justify-center rounded-xl border border-dashed ${
+                    mode === "combined" ? "border-[#004E89]/20 bg-[#F7C59F]/10" : "border-gray-200 bg-gray-50"
+                  } p-8 text-center`}>
+                    <p className={`text-sm ${mode === "combined" ? "text-[#004E89]/60" : colorPalette.textMuted}`}>
+                      No tasks yet — add one!
+                    </p>
+                  </div>
+                ) : (
+                  <ul className="space-y-2">
+                    {currentList.tasks.map((task) => (
+                      <li
+                        key={task.id}
+                        className={`flex items-center gap-3 rounded-xl border ${
+                          mode === "combined" 
+                            ? "border-[#004E89]/20 bg-white hover:bg-[#F7C59F]/10" 
+                            : `${colorPalette.border} bg-white hover:shadow-sm`
+                        } p-3 transition-colors`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={task.done}
+                          onChange={() => toggleDone(task.id)}
+                          className={`h-4 w-4 cursor-pointer rounded ${
+                            mode === "combined"
+                              ? "border-[#004E89]/40 text-[#FF6B35] focus:ring-[#FF6B35]"
+                              : `${colorPalette.borderLight.replace('border-', 'border-')} ${colorPalette.accent.replace('bg-', 'text-')} focus:ring-${colorPalette.accent.replace('bg-', '')}`
+                          }`}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p
+                            className={`text-sm break-words ${
+                              task.done 
+                                ? `line-through ${mode === "combined" ? "text-[#004E89]/40" : colorPalette.textMuted}` 
+                                : mode === "combined"
+                                ? "text-[#004E89]"
+                                : colorPalette.text
+                            }`}
+                          >
+                            {task.text}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => removeTask(task.id)}
+                          className={`flex-shrink-0 rounded p-1 ${
+                            mode === "combined" ? "text-[#004E89]/40" : "text-gray-400"
+                          } transition-colors hover:text-red-500`}
+                          aria-label="Remove task"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            className="h-4 w-4"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {/* Input area with Add and Break Task buttons */}
+              <div className={`flex-shrink-0 border-t ${
+                mode === "combined" ? "border-[#004E89]/10" : colorPalette.border
+              } pt-4 flex items-center gap-2`}>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addTask(input);
+                    }
+                  }}
+                  placeholder="Add task..."
+                  className={`flex-1 rounded-lg border ${
+                    mode === "combined" 
+                      ? "border-[#004E89]/20 text-[#004E89] placeholder:text-[#004E89]/40 focus:border-[#FF6B35]"
+                      : `${colorPalette.border} ${colorPalette.text} ${colorPalette.borderLight.replace('border-', 'focus:border-')}`
+                  } bg-white px-3 py-2 text-sm focus:outline-none`}
+                />
+                <button
+                  onClick={() => addTask(input)}
+                  className={`rounded-lg ${colorPalette.accent} px-3 py-2 text-sm font-medium text-white transition ${colorPalette.accentHover}`}
+                >
+                  Add
+                </button>
+                <button
+                  onClick={() => handleBreakTasks(input)}
+                  disabled={isBreaking}
+                  className={`rounded-lg border ${
+                    mode === "combined"
+                      ? "border-[#004E89]/20 text-[#004E89] hover:bg-[#F7C59F]/20"
+                      : `${colorPalette.borderLight} ${colorPalette.text} ${colorPalette.accentLight.replace('bg-', 'hover:bg-')}`
+                  } bg-white px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+                  title={isBreaking ? "Breaking down task..." : "Break down task using AI"}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-4">
+                    <path d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684ZM13.949 13.684a1 1 0 0 0-1.898 0l-.184.551a1 1 0 0 1-.632.633l-.551.183a1 1 0 0 0 0 1.898l.551.183a1 1 0 0 1 .633.633l.183.551a1 1 0 0 0 1.898 0l.184-.551a1 1 0 0 1 .632-.633l.551-.183a1 1 0 0 0 0-1.898l-.551-.184a1 1 0 0 1-.633-.632l-.183-.551Z" />
+                  </svg>
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="flex h-full items-center justify-center">
+              <p className={`text-sm ${colorPalette.textMuted}`}>No task list selected</p>
+            </div>
+          )}
+        </div>
       </main>
+
+      {/* Modals */}
+      <FocusModeModal isOpen={isFocusModalOpen} onClose={() => setIsFocusModalOpen(false)} mode={mode} />
+      <BreakTasksModal
+        isOpen={isBreakTasksModalOpen}
+        isLoading={isBreaking}
+        tasks={brokenTasks}
+        originalTask={originalTaskText}
+        onClose={() => {
+          if (!isBreaking) {
+            handleDiscardBrokenTasks();
+          }
+        }}
+        onDiscard={handleDiscardBrokenTasks}
+        onAdd={handleAddBrokenTasks}
+        colorPalette={colorPalette}
+      />
     </div>
   );
 }
-
