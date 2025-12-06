@@ -526,24 +526,23 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
                     }}
                     rows={2}
                     placeholder="Type a task... (Enter = add, Shift+Enter = break)"
-                    className={`flex-1 resize-none rounded-2xl border ${colorPalette.border} bg-white/80 p-3 text-sm ${colorPalette.text} ${colorPalette.borderLight.replace('border-', 'focus:border-')} focus:outline-none`}
+                    className={`flex-1 resize-none rounded-2xl border ${colorPalette.border} bg-white/80 p-3 text-base ${colorPalette.text} ${colorPalette.borderLight.replace('border-', 'focus:border-')} focus:outline-none`}
                 />
 
-                <div className="flex flex-col gap-3 px-1">
+                <div className="flex flex-col gap-3">
                     <button
                         onClick={() => addTask(input)}
-                        className={`rounded-2xl ${colorPalette.accent} px-4 py-2 text-sm font-semibold text-white shadow-sm transition ${colorPalette.accentHover} focus:outline-none`}
+                        className={`rounded-2xl ${colorPalette.accent} px-4 py-2 text-base font-semibold text-white shadow-sm transition ${colorPalette.accentHover} focus:outline-none`}
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-5">
                             <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
                         </svg>
-
                     </button>
 
                     <button
                         onClick={() => handleBreakTasks(input)}
                         disabled={isBreaking}
-                        className={`rounded-2xl border ${colorPalette.borderLight} px-4 py-2 text-sm font-semibold ${colorPalette.text} transition ${colorPalette.accentLight.replace('bg-', 'hover:bg-')} disabled:opacity-50 disabled:cursor-not-allowed`}
+                        className={`rounded-2xl border ${colorPalette.borderLight} px-4 py-2 text-base font-semibold ${colorPalette.text} transition ${colorPalette.accentLight.replace('bg-', 'hover:bg-')} disabled:opacity-50 disabled:cursor-not-allowed`}
                         title={isBreaking ? "Breaking down task..." : "Break down task using AI"}
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-5">

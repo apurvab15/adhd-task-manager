@@ -555,7 +555,7 @@ export default function HyperactivePage() {
       <main className="flex-1 flex gap-2 p-2 overflow-hidden min-h-0">
         {/* Left Column - Gamification */}
         <div className={`flex-1 rounded-2xl border ${colorPalette.border} bg-gradient-to-br ${colorPalette.bg} p-6 shadow-lg ${colorPalette.shadow} flex flex-col overflow-y-auto`}>
-          <div className="space-y-6">
+          <div className="space-y-6 flex-1 flex flex-col justify-center">
             {/* Title */}
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.4em] text-zinc-500">
@@ -587,6 +587,7 @@ export default function HyperactivePage() {
               <button
                 onClick={() => setIsFocusModalOpen(true)}
                 className={`w-full rounded-xl ${colorPalette.accent} px-4 py-3 text-sm font-semibold text-white transition ${colorPalette.accentHover} flex items-center justify-center gap-2`}
+                title="Go to Focus Mode (+10 XP)"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" className="h-4 w-4">
                   <path d="M448 256A192 192 0 1 0 64 256a192 192 0 1 0 384 0zM0 256a256 256 0 1 1 512 0A256 256 0 1 1 0 256zm256 80a80 80 0 1 0 0-160 80 80 0 1 0 0 160zm0-224a144 144 0 1 1 0 288 144 144 0 1 1 0-288zM224 256a32 32 0 1 1 64 0 32 32 0 1 1 -64 0z"/>
@@ -603,6 +604,7 @@ export default function HyperactivePage() {
                   }
                 }}
                 className={`w-full rounded-xl border ${colorPalette.borderLight} bg-white px-4 py-3 text-sm font-semibold ${colorPalette.text} transition ${colorPalette.accentLight.replace('bg-', 'hover:bg-')} flex items-center justify-center gap-2`}
+                title="Break a Task (+10 XP)"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
                   <path d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684ZM13.949 13.684a1 1 0 0 0-1.898 0l-.184.551a1 1 0 0 1-.632.633l-.551.183a1 1 0 0 0 0 1.898l.551.183a1 1 0 0 1 .633.633l.183.551a1 1 0 0 0 1.898 0l.184-.551a1 1 0 0 1 .632-.633l.551-.183a1 1 0 0 0 0-1.898l-.551-.184a1 1 0 0 1-.633-.632l-.183-.551Z" />
@@ -676,37 +678,39 @@ export default function HyperactivePage() {
           </div>
 
           {/* Input area */}
-          <div className="flex-shrink-0 border-t border-violet-200/50 pt-4 flex items-center gap-2">
-            <input
+          <div className="flex-shrink-0 border-t border-violet-200/50 pt-4 flex items-start gap-2">
+            <textarea
               ref={inputRef}
-              type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") {
+                if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
                   addTask(input);
                 }
               }}
+              rows={2}
               placeholder="Add task..."
-              className="flex-1 rounded-lg border border-violet-200 bg-white px-3 py-2 text-sm text-violet-900 placeholder:text-violet-400 focus:border-violet-500 focus:outline-none"
+              className="flex-1 rounded-lg border border-violet-200 bg-white px-3 py-2 text-base text-violet-900 placeholder:text-violet-400 focus:border-violet-500 focus:outline-none resize-none"
             />
-            <button
-              onClick={() => addTask(input)}
-              className={`rounded-lg ${colorPalette.accent} px-3 py-2 text-sm font-medium text-white transition ${colorPalette.accentHover}`}
-            >
-              Add
-            </button>
-            <button
-              onClick={() => handleBreakTasks(input)}
-              disabled={isBreaking}
-              className="rounded-lg border border-violet-200 bg-white px-3 py-2 text-sm font-medium text-violet-900 transition-colors hover:bg-violet-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Break down task using AI"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-4">
-                <path d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684ZM13.949 13.684a1 1 0 0 0-1.898 0l-.184.551a1 1 0 0 1-.632.633l-.551.183a1 1 0 0 0 0 1.898l.551.183a1 1 0 0 1 .633.633l.183.551a1 1 0 0 0 1.898 0l.184-.551a1 1 0 0 1 .632-.633l.551-.183a1 1 0 0 0 0-1.898l-.551-.184a1 1 0 0 1-.633-.632l-.183-.551Z" />
-              </svg>
-            </button>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => addTask(input)}
+                className={`rounded-lg ${colorPalette.accent} px-4 py-2 text-base font-medium text-white transition ${colorPalette.accentHover}`}
+              >
+                Add
+              </button>
+              <button
+                onClick={() => handleBreakTasks(input)}
+                disabled={isBreaking}
+                className="rounded-lg border border-violet-200 bg-white px-4 py-2 text-base font-medium text-violet-900 transition-colors hover:bg-violet-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                title="Break down task using AI"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-4">
+                  <path d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684ZM13.949 13.684a1 1 0 0 0-1.898 0l-.184.551a1 1 0 0 1-.632.633l-.551.183a1 1 0 0 0 0 1.898l.551.183a1 1 0 0 1 .633.633l.183.551a1 1 0 0 0 1.898 0l.184-.551a1 1 0 0 1 .632-.633l.551-.183a1 1 0 0 0 0-1.898l-.551-.184a1 1 0 0 1-.633-.632l-.183-.551Z" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -742,23 +746,6 @@ export default function HyperactivePage() {
                 </div>
               ))
             )}
-          </div>
-
-          {/* Today's Progress Summary */}
-          <div className={`mt-6 rounded-xl border ${colorPalette.borderLight} ${colorPalette.accentLight}/50 p-4`}>
-            <p className={`text-xs font-semibold ${colorPalette.textDark} mb-2`}>Today&apos;s Progress</p>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-zinc-600">
-                <span>Today&apos;s Tasks</span>
-                <span>{completedToday}/{totalToday}</span>
-              </div>
-              <div className={`h-2 w-full overflow-hidden rounded-full ${colorPalette.borderLight.replace('border-', 'bg-')}`}>
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-violet-500 to-rose-500 transition-all duration-500"
-                  style={{ width: `${totalToday > 0 ? (completedToday / totalToday) * 100 : 0}%` }}
-                />
-              </div>
-            </div>
           </div>
         </div>
       </main>

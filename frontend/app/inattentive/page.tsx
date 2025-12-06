@@ -428,37 +428,39 @@ export default function InattentivePage() {
           </div>
 
           {/* Input area - Small and Simple */}
-          <div className="mt-6 border-t border-[#7085FF]/10 pt-4 flex items-center gap-2">
+          <div className="mt-6 border-t border-[#7085FF]/10 pt-4 flex items-start gap-2">
             <textarea
               ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") {
+                if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
                   addTask(input);
                 }
               }}
+              rows={2}
               placeholder="Add task..."
-              className="flex-1 rounded-lg border border-[#7085FF]/20 bg-white px-3 py-2 text-base text-gray-900 placeholder:text-gray-400 focus:border-[#7085FF] focus:outline-none"
+              className="flex-1 rounded-lg border border-[#7085FF]/20 bg-white px-3 py-2 text-lg text-gray-900 placeholder:text-gray-400 focus:border-[#7085FF] focus:outline-none resize-none"
             />
-            <button
-              onClick={() => addTask(input)}
-              className={`rounded-lg ${colorPalette.accent} px-4 py-2 text-base font-medium text-white transition ${colorPalette.accentHover}`}
-            >
-              Add
-            </button>
-            <button
-              onClick={() => handleBreakTasks(input)} 
-              disabled={isBreaking}
-              title={isBreaking ? "Breaking down task..." : "Break down task"}
-              className={`text-base font-medium border-2 border-[#7085FF] text-[#7085FF] px-4 py-2 rounded-lg transition-colors hover:bg-[#7085FF]/10`}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-5">
-                <path d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684ZM13.949 13.684a1 1 0 0 0-1.898 0l-.184.551a1 1 0 0 1-.632.633l-.551.183a1 1 0 0 0 0 1.898l.551.183a1 1 0 0 1 .633.633l.183.551a1 1 0 0 0 1.898 0l.184-.551a1 1 0 0 1 .632-.633l.551-.183a1 1 0 0 0 0-1.898l-.551-.184a1 1 0 0 1-.633-.632l-.183-.551Z" />
-              </svg>
-
-            </button>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => addTask(input)}
+                className={`rounded-lg ${colorPalette.accent} px-4 py-2 text-lg font-medium text-white transition ${colorPalette.accentHover}`}
+              >
+                Add
+              </button>
+              <button
+                onClick={() => handleBreakTasks(input)} 
+                disabled={isBreaking}
+                title={isBreaking ? "Breaking down task..." : "Break down task"}
+                className={`text-lg font-medium border-2 border-[#7085FF] text-[#7085FF] px-4 py-2 rounded-lg transition-colors hover:bg-[#7085FF]/10 flex items-center justify-center gap-2`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-5">
+                  <path d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684ZM13.949 13.684a1 1 0 0 0-1.898 0l-.184.551a1 1 0 0 1-.632.633l-.551.183a1 1 0 0 0 0 1.898l.551.183a1 1 0 0 1 .633.633l.183.551a1 1 0 0 0 1.898 0l.184-.551a1 1 0 0 1 .632-.633l.551-.183a1 1 0 0 0 0-1.898l-.551-.184a1 1 0 0 1-.633-.632l-.183-.551Z" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
 

@@ -688,37 +688,39 @@ export default function CombinedPage() {
             </div>
 
               {/* Input area */}
-              <div className="flex-shrink-0 border-t border-[#004E89]/10 pt-4 flex items-center gap-2">
-                <input
+              <div className="flex-shrink-0 border-t border-[#004E89]/10 pt-4 flex items-start gap-2">
+                <textarea
                   ref={inputRef}
-                  type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                    e.preventDefault();
-                    addTask(input);
-                  }
-                }}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      addTask(input);
+                    }
+                  }}
+                  rows={2}
                   placeholder="Add task..."
-                  className="flex-1 rounded-lg border border-[#004E89]/20 bg-white px-3 py-2 text-sm text-[#004E89] placeholder:text-[#004E89]/40 focus:border-[#FF6B35] focus:outline-none"
-              />
-                <button
-                  onClick={() => addTask(input)}
-                  className={`rounded-lg ${colorPalette.accent} px-3 py-2 text-sm font-medium text-white transition ${colorPalette.accentHover}`}
-                >
-                  Add
-                </button>
-                <button
-                  onClick={() => handleBreakTasks(input)}
-                  disabled={isBreaking}
-                  className="rounded-lg border border-[#004E89]/20 bg-white px-3 py-2 text-sm font-medium text-[#004E89] transition-colors hover:bg-[#F7C59F]/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Break down task using AI"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-4">
-                    <path d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684ZM13.949 13.684a1 1 0 0 0-1.898 0l-.184.551a1 1 0 0 1-.632.633l-.551.183a1 1 0 0 0 0 1.898l.551.183a1 1 0 0 1 .633.633l.183.551a1 1 0 0 0 1.898 0l.184-.551a1 1 0 0 1 .632-.633l.551-.183a1 1 0 0 0 0-1.898l-.551-.184a1 1 0 0 1-.633-.632l-.183-.551Z" />
-                  </svg>
-                </button>
+                  className="flex-1 rounded-lg border border-[#004E89]/20 bg-white px-3 py-2 text-base text-[#004E89] placeholder:text-[#004E89]/40 focus:border-[#FF6B35] focus:outline-none resize-none"
+                />
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={() => addTask(input)}
+                    className={`rounded-lg ${colorPalette.accent} px-4 py-2 text-base font-medium text-white transition ${colorPalette.accentHover}`}
+                  >
+                    Add
+                  </button>
+                  <button
+                    onClick={() => handleBreakTasks(input)}
+                    disabled={isBreaking}
+                    className="rounded-lg border border-[#004E89]/20 bg-white px-4 py-2 text-base font-medium text-[#004E89] transition-colors hover:bg-[#F7C59F]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    title="Break down task using AI"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-4">
+                      <path d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684ZM13.949 13.684a1 1 0 0 0-1.898 0l-.184.551a1 1 0 0 1-.632.633l-.551.183a1 1 0 0 0 0 1.898l.551.183a1 1 0 0 1 .633.633l.183.551a1 1 0 0 0 1.898 0l.184-.551a1 1 0 0 1 .632-.633l.551-.183a1 1 0 0 0 0-1.898l-.551-.184a1 1 0 0 1-.633-.632l-.183-.551Z" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
 

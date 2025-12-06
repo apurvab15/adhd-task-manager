@@ -141,14 +141,49 @@ export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }
             <label className={`mb-2 block text-sm font-semibold ${colorPalette.textDark}`}>
               Timer Duration (minutes)
             </label>
-            <input
-              type="number"
-              min={1}
-              max={120}
-              value={timerMinutes}
-              onChange={(e) => setTimerMinutes(Math.max(1, parseInt(e.target.value) || 25))}
-              className={`w-full rounded-xl border ${colorPalette.borderLight} bg-white px-4 py-2 ${colorPalette.textDark} ${mode === "inattentive" ? "focus:border-[#7085FF]" : "focus:border-violet-400"} focus:outline-none`}
-            />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setTimerMinutes(Math.max(1, timerMinutes - 1))}
+                className={`flex-shrink-0 rounded-xl border ${colorPalette.borderLight} bg-white px-3 py-2 ${colorPalette.textDark} hover:bg-gray-50 transition-colors ${mode === "inattentive" ? "hover:border-[#7085FF]" : "hover:border-violet-400"} focus:outline-none`}
+                aria-label="Decrease duration"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+                  <path fillRule="evenodd" d="M4 10a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H4.75A.75.75 0 0 1 4 10Z" clipRule="evenodd" />
+                </svg>
+              </button>
+              <input
+                type="number"
+                min={1}
+                max={120}
+                value={timerMinutes}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value);
+                  if (!isNaN(value) && value > 0) {
+                    setTimerMinutes(Math.min(120, Math.max(1, value)));
+                  }
+                }}
+                onBlur={(e) => {
+                  const value = parseInt(e.target.value);
+                  if (isNaN(value) || value < 1) {
+                    setTimerMinutes(25);
+                  } else if (value > 120) {
+                    setTimerMinutes(120);
+                  }
+                }}
+                className={`flex-1 rounded-xl border ${colorPalette.borderLight} bg-white px-4 py-2 text-center ${colorPalette.textDark} ${mode === "inattentive" ? "focus:border-[#7085FF]" : "focus:border-violet-400"} focus:outline-none`}
+              />
+              <button
+                type="button"
+                onClick={() => setTimerMinutes(Math.min(120, timerMinutes + 1))}
+                className={`flex-shrink-0 rounded-xl border ${colorPalette.borderLight} bg-white px-3 py-2 ${colorPalette.textDark} hover:bg-gray-50 transition-colors ${mode === "inattentive" ? "hover:border-[#7085FF]" : "hover:border-violet-400"} focus:outline-none`}
+                aria-label="Increase duration"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+                  <path d="M10 3a.75.75 0 0 1 .75.75v5.5h5.5a.75.75 0 0 1 0 1.5h-5.5v5.5a.75.75 0 0 1-1.5 0v-5.5H4.25a.75.75 0 0 1 0-1.5h5.5v-5.5A.75.75 0 0 1 10 3Z" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* Task Selection */}

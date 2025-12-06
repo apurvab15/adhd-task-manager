@@ -65,27 +65,27 @@ export default function SimpleTaskList({
 
   return (
     <div className="w-full">
-      <ul className="space-y-0">
+      <ul className="space-y-3">
         {tasks.map((task) => (
           <li
             key={task.id}
-            className="flex items-center gap-3 py-1"
+            className={`flex items-center gap-3 py-3 px-4 rounded-xl border ${colorPalette ? colorPalette.borderLight : 'border-gray-200'} bg-white`}
           >
             <input
               type="checkbox"
               id={`task-${task.id}`}
               checked={checkedTasks.has(task.id)}
               onChange={(e) => handleTaskComplete(task.id, e.target.checked)}
-              className={`h-4 w-4 cursor-pointer rounded border-2 transition-colors ${
+              className={`h-5 w-5 cursor-pointer rounded border-2 transition-colors ${
                 colorPalette
-                  ? `border-[#7085FF]/60 bg-white text-[#7085FF] focus:ring-2 focus:ring-[#7085FF]/30 focus:border-[#7085FF] checked:bg-[#7085FF] checked:border-[#7085FF]`
+                  ? `${colorPalette.borderLight} bg-white ${colorPalette.text} focus:ring-2 ${colorPalette.accentLight.replace('bg-', 'focus:ring-')} ${colorPalette.accent.replace('bg-', 'checked:bg-')} ${colorPalette.accent.replace('bg-', 'checked:border-')}`
                   : "border-gray-300"
               }`}
             />
             <label
               htmlFor={`task-${task.id}`}
-              className={`flex-1 cursor-pointer text-gray-700 ${
-                checkedTasks.has(task.id) ? "line-through" : ""
+              className={`flex-1 cursor-pointer text-lg ${colorPalette ? colorPalette.text : 'text-gray-700'} ${
+                checkedTasks.has(task.id) ? `line-through ${colorPalette ? colorPalette.textMuted : 'text-gray-400'}` : ""
               }`}
             >
               {task.text}
