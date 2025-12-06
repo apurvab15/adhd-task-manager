@@ -49,6 +49,8 @@ export default function CombinedPage() {
   const nextTaskId = useRef(1);
   const nextListId = useRef(1);
   const confettiRef = useRef<JSConfetti | null>(null);
+  const isUpdatingFromStorage = useRef(false);
+  const taskListsRef = useRef<TaskList[]>([]);
   const { breakTask, isBreaking } = useTaskBreaker("combined");
   const colorPalette: ColorPalette = combinedPalette;
 
@@ -123,9 +125,19 @@ export default function CombinedPage() {
     );
   }, [todayTasks, isHydrated]);
 
+  // Update ref whenever taskLists changes
+  useEffect(() => {
+    taskListsRef.current = taskLists;
+  }, [taskLists]);
+
   // Save task lists to task manager storage (without status field)
   useEffect(() => {
     if (!isHydrated || typeof window === "undefined") return;
+    // Skip if we're updating from storage to prevent infinite loop
+    if (isUpdatingFromStorage.current) {
+      isUpdatingFromStorage.current = false;
+      return;
+    }
     // Remove status field before saving to match task manager format
     const listsToSave = taskLists.map(({ status, ...list }) => list);
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(listsToSave));
@@ -147,7 +159,14 @@ export default function CombinedPage() {
             ...list,
             status: calculateStatus(list.tasks),
           }));
-          setTaskLists(listsWithStatus);
+          // Check if data actually changed to prevent unnecessary updates
+          // Use ref to get current value without adding to dependencies
+          const currentData = JSON.stringify(taskListsRef.current.map(({ status, ...list }) => list));
+          const newData = JSON.stringify(parsed);
+          if (currentData !== newData) {
+            isUpdatingFromStorage.current = true;
+            setTaskLists(listsWithStatus);
+          }
           }
         } catch (error) {
           console.error("Error syncing with task manager:", error);
@@ -309,13 +328,63 @@ export default function CombinedPage() {
   };
 
   const handleTodayTaskToggle = (taskId: number) => {
-    setTodayTasks((tasks) =>
-      tasks.map((t) => (t.id === taskId ? { ...t, done: !t.done } : t))
-    );
+    setTodayTasks((tasks) => {
+      const updatedTasks = tasks.map((t) => (t.id === taskId ? { ...t, done: !t.done } : t));
+      const toggledTask = updatedTasks.find((t) => t.id === taskId);
+      
+      // Also update task manager if the task exists there
+      if (toggledTask) {
+        setTaskLists((lists) => {
+          return lists.map((list) => {
+            const taskInList = list.tasks.find((t) => t.id === taskId);
+            if (taskInList) {
+              const updatedTasks = list.tasks.map((t) =>
+                t.id === taskId ? { ...t, done: toggledTask.done } : t
+              );
+              const newStatus = calculateStatus(updatedTasks);
+              
+              // Trigger confetti when moving to done
+              if (newStatus === "done" && list.status !== "done" && confettiRef.current) {
+                confettiRef.current.addConfetti({
+                  emojis: ["🎉", "✨", "🌟", "💫", "🎊"],
+                  emojiSize: 100,
+                  confettiNumber: 50,
+                });
+              }
+              
+              return {
+                ...list,
+                tasks: updatedTasks,
+                status: newStatus,
+              };
+            }
+            return list;
+          });
+        });
+      }
+      
+      return updatedTasks;
+    });
   };
 
   const handleRemoveTodayTask = (taskId: number) => {
     setTodayTasks((tasks) => tasks.filter((t) => t.id !== taskId));
+    
+    // Also remove from task manager if the task exists there
+    setTaskLists((lists) =>
+      lists.map((list) => {
+        const taskInList = list.tasks.find((t) => t.id === taskId);
+        if (taskInList) {
+          const newTasks = list.tasks.filter((t) => t.id !== taskId);
+          // If no tasks left, remove the list
+          if (newTasks.length === 0) {
+            return null;
+          }
+          return { ...list, tasks: newTasks, status: calculateStatus(newTasks) };
+        }
+        return list;
+      }).filter((list): list is TaskList => list !== null)
+    );
   };
 
   const handleAddTodayTask = (text: string) => {
@@ -394,35 +463,47 @@ export default function CombinedPage() {
             </div>
             <Link
               href="/tasks?mode=combined"
-              className="rounded-lg px-4 py-2 text-sm font-medium text-[#004E89] transition-colors hover:bg-[#F7C59F]/20"
+              className="flex items-center justify-center rounded-lg p-2 bg-white border-2 border-[#004E89] text-[#004E89] transition-colors hover:bg-[#F7C59F]/10"
+              title="Task Manager"
             >
-              Task Manager
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" className="h-4 w-4">
+                <path d="M152.1 38.2c9.9 8.9 10.7 24 1.8 33.9l-72 80c-4.4 4.9-10.6 7.8-17.2 7.9s-12.9-2.4-17.6-7L7 113C-2.3 103.6-2.3 88.4 7 79s24.6-9.4 33.9 0l22.1 22.1 55.1-61.2c8.9-9.9 24-10.7 33.9-1.8zm0 160c9.9 8.9 10.7 24 1.8 33.9l-72 80c-4.4 4.9-10.6 7.8-17.2 7.9s-12.9-2.4-17.6-7L7 273c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l22.1 22.1 55.1-61.2c8.9-9.9 24-10.7 33.9-1.8zM224 96c0-17.7 14.3-32 32-32H480c17.7 0 32 14.3 32 32s-14.3 32-32 32H256c-17.7 0-32-14.3-32-32zm0 160c0-17.7 14.3-32 32-32H480c17.7 0 32 14.3 32 32s-14.3 32-32 32H256c-17.7 0-32-14.3-32-32zM160 416c0-17.7 14.3-32 32-32H480c17.7 0 32 14.3 32 32s-14.3 32-32 32H192c-17.7 0-32-14.3-32-32zM48 368a48 48 0 1 1 0 96 48 48 0 1 1 0-96z"/>
+              </svg>
             </Link>
             <button
               onClick={() => setIsFocusModalOpen(true)}
-              className={`rounded-lg ${colorPalette.accent} px-4 py-2 text-sm font-medium text-white transition-colors ${colorPalette.accentHover}`}
+              className={`flex items-center justify-center rounded-lg p-2 ${colorPalette.accent} text-white transition-colors ${colorPalette.accentHover}`}
+              title="Focus Mode"
             >
-              Focus Mode
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" className="h-4 w-4">
+                <path d="M448 256A192 192 0 1 0 64 256a192 192 0 1 0 384 0zM0 256a256 256 0 1 1 512 0A256 256 0 1 1 0 256zm256 80a80 80 0 1 0 0-160 80 80 0 1 0 0 160zm0-224a144 144 0 1 1 0 288 144 144 0 1 1 0-288zM224 256a32 32 0 1 1 64 0 32 32 0 1 1 -64 0z"/>
+              </svg>
             </button>
           </div>
         </div>
       </nav>
 
       {/* Progress Bar */}
-      {totalToday > 0 && (
-        <div className="flex-shrink-0 border-b border-[#004E89]/10 bg-white/50 px-4 py-3">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-[#004E89]">Today&apos;s Progress</span>
-            <span className="text-sm font-medium text-[#1A659E]">{completedToday}/{totalToday}</span>
+      <div className="flex-shrink-0 border-b border-[#004E89]/10 bg-white/50 px-4 py-3">
+        {totalToday > 0 ? (
+          <>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-[#004E89]">Today&apos;s Progress</span>
+              <span className="text-sm font-medium text-[#1A659E]">{completedToday}/{totalToday}</span>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-[#F7C59F]/30">
+              <div
+                className="h-full rounded-full bg-[#FF6B35] transition-all duration-500"
+                style={{ width: `${(completedToday / totalToday) * 100}%` }}
+              />
+            </div>
+          </>
+        ) : (
+          <div className="text-center py-2">
+            <p className="text-sm font-medium text-[#004E89]">Let&apos;s get started for today, set our goals!</p>
           </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-[#F7C59F]/30">
-            <div
-              className="h-full rounded-full bg-[#FF6B35] transition-all duration-500"
-              style={{ width: `${(completedToday / totalToday) * 100}%` }}
-            />
-                </div>
-              </div>
-            )}
+        )}
+      </div>
 
       {/* Main Layout */}
       <main className="flex-1 flex gap-4 p-4 overflow-hidden min-h-0">
@@ -456,7 +537,7 @@ export default function CombinedPage() {
                       />
                       <div className="flex-1 min-w-0">
                         <p
-                        className={`text-sm truncate ${
+                        className={`text-sm break-words ${
                           task.done ? "line-through text-[#004E89]/40" : "text-[#004E89]"
                           }`}
                         >
@@ -523,8 +604,8 @@ export default function CombinedPage() {
               </div>
 
             {/* Right Column - Next Step (50%) */}
-            <div className="w-1/2 rounded-2xl border-2 border-[#004E89]/20 bg-white p-12 flex flex-col justify-center min-h-0">
-              <h2 className="text-3xl font-bold text-[#004E89] mb-8">Next Step</h2>
+            <div className="w-1/2 rounded-2xl border-2 border-[#004E89]/20 bg-white p-12 flex flex-col min-h-0">
+              <h2 className="text-4xl font-bold text-[#004E89] mb-8">Next Step</h2>
 
               {nextTask ? (
                 <div className="space-y-6">
@@ -533,16 +614,16 @@ export default function CombinedPage() {
                       type="checkbox"
                       checked={nextTask.done}
                       onChange={() => handleTodayTaskToggle(nextTask.id)}
-                      className="h-7 w-7 cursor-pointer rounded border-2 border-[#004E89]/60 bg-white text-[#004E89] focus:ring-2 focus:ring-[#004E89]/30 focus:border-[#004E89] checked:bg-[#004E89] checked:border-[#004E89] mt-1 transition-colors"
+                      className="h-8 w-8 cursor-pointer rounded border-2 border-[#004E89]/60 bg-white text-[#004E89] focus:ring-2 focus:ring-[#004E89]/30 focus:border-[#004E89] checked:bg-[#004E89] checked:border-[#004E89] mt-1 transition-colors"
                     />
-                    <p className="text-2xl font-medium text-[#004E89] leading-relaxed flex-1">
+                    <p className="text-4xl font-medium text-[#004E89] leading-relaxed flex-1">
                       {nextTask.text}
                     </p>
                 </div>
               </div>
               ) : (
                 <div className="space-y-6">
-                  <p className="text-2xl font-medium text-[#004E89]/60 leading-relaxed">
+                  <p className="text-4xl font-medium text-[#004E89]/60 leading-relaxed">
                     {todayTasks.length === 0 
                       ? "Let's get started!" 
                       : "All tasks completed! 🎉"}
@@ -553,8 +634,8 @@ export default function CombinedPage() {
           </>
         ) : (
           <>
-            {/* Left Column - Today's List (30%) */}
-            <div className="w-[30%] rounded-2xl border border-[#004E89]/20 bg-white/90 p-6 shadow-lg flex flex-col min-h-0">
+            {/* Left Column - Today's List (50%) */}
+            <div className="w-1/2 rounded-2xl border border-[#004E89]/20 bg-white/90 p-6 shadow-lg flex flex-col min-h-0">
               <div className="mb-4 flex-shrink-0">
                 <h2 className="text-2xl font-semibold text-[#004E89]">Today&apos;s List</h2>
           </div>
@@ -581,7 +662,7 @@ export default function CombinedPage() {
                       />
                       <div className="flex-1 min-w-0">
                         <p
-                          className={`text-sm truncate ${
+                          className={`text-sm break-words ${
                               task.done ? "line-through text-[#004E89]/40" : "text-[#004E89]"
                           }`}
                         >
@@ -647,8 +728,8 @@ export default function CombinedPage() {
               </div>
             </div>
 
-            {/* Right Column - Kanban Board (70%) */}
-            <div className="flex-1 flex gap-4 min-h-0">
+            {/* Right Column - Kanban Board (50%) */}
+            <div className="w-1/2 flex gap-4 min-h-0">
           {/* TO DO Column */}
           <div className="flex-1 rounded-2xl border border-[#004E89]/20 bg-white/90 p-4 shadow-lg flex flex-col min-h-0">
             <h3 className="text-lg font-semibold text-[#004E89] mb-4 flex-shrink-0">TO DO</h3>

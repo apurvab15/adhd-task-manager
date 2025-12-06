@@ -317,7 +317,7 @@ export default function InattentivePage() {
     <div className="min-h-screen bg-white">
       {/* Minimal Navigation */}
       <nav className="border-b border-[#7085FF]/10 bg-white/90 backdrop-blur-sm">
-        <div className="flex items-center justify-between px-8 py-4">
+        <div className="flex items-center justify-between px-8 py-2">
           <Link href="/inattentive" className="text-[#7085FF] transition-colors hover:text-[#5A75FF]">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -335,77 +335,29 @@ export default function InattentivePage() {
           <div className="flex items-center gap-6">
             <Link
               href="/tasks?mode=inattentive"
-              className="text-lg font-semibold border-2 border-[#7085FF] text-[#7085FF] px-6 py-2 rounded-xl transition-colors hover:bg-[#7085FF]/10"
+              className="flex items-center justify-center rounded-xl p-2 bg-white border-2 border-[#7085FF] text-[#7085FF] transition-colors hover:bg-[#7085FF]/10"
+              title="Task Manager"
             >
-              Tasks
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" className="h-4 w-4">
+                <path d="M152.1 38.2c9.9 8.9 10.7 24 1.8 33.9l-72 80c-4.4 4.9-10.6 7.8-17.2 7.9s-12.9-2.4-17.6-7L7 113C-2.3 103.6-2.3 88.4 7 79s24.6-9.4 33.9 0l22.1 22.1 55.1-61.2c8.9-9.9 24-10.7 33.9-1.8zm0 160c9.9 8.9 10.7 24 1.8 33.9l-72 80c-4.4 4.9-10.6 7.8-17.2 7.9s-12.9-2.4-17.6-7L7 273c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l22.1 22.1 55.1-61.2c8.9-9.9 24-10.7 33.9-1.8zM224 96c0-17.7 14.3-32 32-32H480c17.7 0 32 14.3 32 32s-14.3 32-32 32H256c-17.7 0-32-14.3-32-32zm0 160c0-17.7 14.3-32 32-32H480c17.7 0 32 14.3 32 32s-14.3 32-32 32H256c-17.7 0-32-14.3-32-32zM160 416c0-17.7 14.3-32 32-32H480c17.7 0 32 14.3 32 32s-14.3 32-32 32H192c-17.7 0-32-14.3-32-32zM48 368a48 48 0 1 1 0 96 48 48 0 1 1 0-96z"/>
+              </svg>
             </Link>
             <button
               onClick={() => setIsFocusModalOpen(true)}
-              className={`rounded-lg ${colorPalette.accent} px-6 py-2 text-lg font-medium text-white transition-colors ${colorPalette.accentHover}`}
+              className="flex items-center justify-center rounded-xl p-2 bg-white border-2 border-[#7085FF] text-[#7085FF] transition-colors hover:bg-[#7085FF]/10"
+              title="Focus Mode"
             >
-              Focus
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" className="h-4 w-4">
+                <path d="M448 256A192 192 0 1 0 64 256a192 192 0 1 0 384 0zM0 256a256 256 0 1 1 512 0A256 256 0 1 1 0 256zm256 80a80 80 0 1 0 0-160 80 80 0 1 0 0 160zm0-224a144 144 0 1 1 0 288 144 144 0 1 1 0-288zM224 256a32 32 0 1 1 64 0 32 32 0 1 1 -64 0z"/>
+              </svg>
             </button>
           </div>
         </div>
       </nav>
 
       {/* 2 Column Layout - Simplified for Inattentive Type */}
-      <main className="flex h-[calc(100vh-81px)] gap-8 p-8">
-        {/* Left Column - Next Step */}
-        <div className="flex-1 rounded-3xl border-2 border-[#7085FF]/20 bg-white p-12 flex flex-col justify-center">
-          <h2 className="text-4xl font-bold text-gray-900 mb-8">Next Step</h2>
-
-          {nextTask ? (
-            <div className="space-y-6">
-              <div className="flex items-start gap-6">
-                <input
-                  type="checkbox"
-                  checked={nextTask.done}
-                  onChange={() => handleTaskToggle(nextTask.id)}
-                  className="h-8 w-8 cursor-pointer rounded border-2 border-[#7085FF]/60 bg-white text-[#7085FF] focus:ring-2 focus:ring-[#7085FF]/30 focus:border-[#7085FF] checked:bg-[#7085FF] checked:border-[#7085FF] mt-1 transition-colors"
-                />
-                <p className="text-3xl font-medium text-gray-900 leading-relaxed flex-1">
-                  {nextTask.text}
-                </p>
-              </div>
-
-              {/* Action buttons */}
-              <div className="flex flex-col gap-4 mt-8">
-                <button
-                  onClick={() => setIsFocusModalOpen(true)}
-                  className={`text-xl font-semibold ${colorPalette.accent} px-6 py-3 text-white rounded-xl transition-colors ${colorPalette.accentHover}`}
-                >
-                  Focus Mode
-                </button>
-                
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              <p className="text-3xl font-medium text-gray-400 leading-relaxed">
-                {todayTasks.length === 0
-                  ? "Lets get started!"
-                  : "All tasks completed! 🎉"}
-              </p>
-              <div className="flex flex-col gap-4 mt-6">
-                <button
-                  onClick={() => setIsFocusModalOpen(true)}
-                  className={`text-xl font-semibold ${colorPalette.accent} px-6 py-3 text-white rounded-xl transition-colors ${colorPalette.accentHover}`}
-                >
-                  Focus Mode
-                </button>
-                <button
-                  onClick={() => setIsAddTasksModalOpen(true)}
-                  className={`text-xl font-semibold border-2 border-[#7085FF] text-[#7085FF] px-6 py-3 rounded-xl transition-colors hover:bg-[#7085FF]/10`}
-                >
-                  Add Tasks
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Right Column - Today's List */}
+      <main className="flex h-[calc(100vh-65px)] gap-8 p-8">
+        {/* Left Column - Today's List */}
         <div className="flex-1 rounded-3xl border-2 border-[#7085FF]/20 bg-white p-12 flex flex-col">
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
@@ -508,6 +460,35 @@ export default function InattentivePage() {
 
             </button>
           </div>
+        </div>
+
+        {/* Right Column - Next Step */}
+        <div className="flex-1 rounded-3xl border-2 border-[#7085FF]/20 bg-white p-12 flex flex-col justify-center">
+          <h2 className="text-4xl font-bold text-gray-900 mb-8">Next Step</h2>
+
+          {nextTask ? (
+            <div className="space-y-6">
+              <div className="flex items-start gap-6">
+                <input
+                  type="checkbox"
+                  checked={nextTask.done}
+                  onChange={() => handleTaskToggle(nextTask.id)}
+                  className="h-8 w-8 cursor-pointer rounded border-2 border-[#7085FF]/60 bg-white text-[#7085FF] focus:ring-2 focus:ring-[#7085FF]/30 focus:border-[#7085FF] checked:bg-[#7085FF] checked:border-[#7085FF] mt-1 transition-colors"
+                />
+                <p className="text-3xl font-medium text-gray-900 leading-relaxed flex-1">
+                  {nextTask.text}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <p className="text-3xl font-medium text-gray-400 leading-relaxed">
+                {todayTasks.length === 0
+                  ? "Lets get started!"
+                  : "All tasks completed! 🎉"}
+              </p>
+            </div>
+          )}
         </div>
       </main>
 
