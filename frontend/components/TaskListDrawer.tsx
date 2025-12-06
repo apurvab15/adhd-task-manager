@@ -86,6 +86,22 @@ export const periwinklePalette: ColorPalette = {
     hoverBg: "hover:bg-[#7085FF]/5",
 };
 
+export const combinedPalette: ColorPalette = {
+    bg: "from-[#EFEFD0] via-[#F7C59F]/30 to-[#EFEFD0]",
+    border: "border-[#004E89]/20",
+    borderLight: "border-[#1A659E]/30",
+    shadow: "shadow-[#1A659E]/10",
+    text: "text-[#004E89]",
+    textDark: "text-[#1A659E]",
+    textMuted: "text-[#004E89]/60",
+    accent: "bg-[#FF6B35]",
+    accentHover: "hover:bg-[#E55A2B]",
+    accentLight: "bg-[#F7C59F]/20",
+    activeBg: "bg-[#EFEFD0]",
+    activeText: "text-[#1A659E]",
+    hoverBg: "hover:bg-[#F7C59F]/10",
+};
+
 type TaskListDrawerProps = {
     taskLists: TaskList[];
     currentListId: number;

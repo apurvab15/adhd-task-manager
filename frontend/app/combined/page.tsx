@@ -2,99 +2,55 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useGamification } from "@/hooks/useGamification";
 import { useTaskBreaker } from "@/hooks/useTaseBreaking";
-import { getProgressPercentage, awardXPForTask, revokeXPForTaskCompletion, penalizeXPForUncompletedTask } from "@/utils/gamification";
 import FocusModeModal from "@/components/FocusModeModal";
 import AddTasksModal from "@/components/AddTasksModal";
 import BreakTasksModal from "@/components/BreakTasksModal";
-import { violetPalette, periwinklePalette, type ColorPalette } from "@/components/TaskListDrawer";
+import { combinedPalette, type ColorPalette } from "@/components/TaskListDrawer";
 import JSConfetti from "js-confetti";
 
-const STORAGE_KEY_INATTENTIVE = "adhd-task-lists-inattentive";
-const STORAGE_KEY_HYPERACTIVE = "adhd-task-lists-hyperactive";
-const STORAGE_KEY_COMBINED = "adhd-task-lists-combined";
-const TODAY_TASKS_KEY_INATTENTIVE = "adhd-today-tasks-inattentive";
-const TODAY_TASKS_KEY_HYPERACTIVE = "adhd-today-tasks-hyperactive";
-const TODAY_TASKS_KEY_COMBINED = "adhd-today-tasks-combined";
-
-const MOTIVATION_MESSAGES = [
-  "You're doing great! Keep it up! 💪",
-  "Every task completed is a step forward! 🚀",
-  "Progress, not perfection! ✨",
-  "You've got this! One task at a time! 🌟",
-  "Small steps lead to big achievements! 🎯",
-  "Your effort today matters! 💫",
-  "Keep going, you're making progress! 🌈",
-  "Every completed task is a win! 🏆",
-  "You're building momentum! Keep pushing! ⚡",
-  "Focus on progress, not perfection! 🌸",
-  "You're stronger than you think! 💎",
-  "One task down, you're on a roll! 🎉",
-  "Your consistency is paying off! 🌟",
-  "Every small step counts! 🦋",
-  "You're creating positive change! ✨",
-  "Keep moving forward! 🚶‍♂️",
-  "You're doing better than you think! 💪",
-  "Progress is progress, no matter how small! 🌱",
-  "You're building great habits! 🌈",
-  "Stay focused, you've got this! 🎯",
-];
-
-type Mode = "inattentive" | "hyperactive";
+const STORAGE_KEY = "adhd-task-lists-combined";
+const TODAY_TASKS_KEY = "adhd-today-tasks-combined";
 
 type Task = {
   id: number;
   text: string;
   done: boolean;
-  sourceListId?: number;
-  sourceListName?: string;
 };
 
 type TaskList = {
   id: number;
   name: string;
-  tasks: { id: number; text: string; done: boolean }[];
+  tasks: Task[];
+  status?: "todo" | "doing" | "done";
+};
+
+// Helper to calculate status from tasks
+const calculateStatus = (tasks: Task[]): "todo" | "doing" | "done" => {
+  if (tasks.length === 0) return "todo";
+  const completedCount = tasks.filter((t) => t.done).length;
+  if (completedCount === tasks.length) return "done";
+  if (completedCount > 0) return "doing";
+  return "todo";
 };
 
 export default function CombinedPage() {
-  const [mode, setMode] = useState<Mode>("hyperactive");
-  const { stats } = useGamification();
-  const progressPercentage = getProgressPercentage(stats);
+  const [todayTasks, setTodayTasks] = useState<Task[]>([]);
+  const [taskLists, setTaskLists] = useState<TaskList[]>([]);
+  const [isHydrated, setIsHydrated] = useState(false);
+  const [input, setInput] = useState("");
   const [isFocusModalOpen, setIsFocusModalOpen] = useState(false);
   const [isAddTasksModalOpen, setIsAddTasksModalOpen] = useState(false);
   const [isBreakTasksModalOpen, setIsBreakTasksModalOpen] = useState(false);
   const [brokenTasks, setBrokenTasks] = useState<string[]>([]);
   const [originalTaskText, setOriginalTaskText] = useState<string>("");
-  const [todayTasks, setTodayTasks] = useState<Task[]>([]);
-  const [taskLists, setTaskLists] = useState<TaskList[]>([]);
-  const [isHydrated, setIsHydrated] = useState(false);
-  const [motivationMessage, setMotivationMessage] = useState("");
-  const [input, setInput] = useState("");
-  // const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+  const [mode, setMode] = useState<"calm" | "chaos">("chaos");
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-
-  // Helper function to focus the appropriate input based on mode
-  const focusInput = () => {
-    if (mode === "inattentive") {
-      inputRef.current?.focus();
-    } else {
-      textareaRef.current?.focus();
-    }
-  };
-
   const nextTaskId = useRef(1);
   const nextListId = useRef(1);
   const confettiRef = useRef<JSConfetti | null>(null);
-  const hasTriggeredConfettiRef = useRef(false);
-  const hasTriggeredLevelUpConfettiRef = useRef(false);
-  const previousLevelRef = useRef(stats.level);
-  const isInitialMountRef = useRef(true);
-  const { breakTask, isBreaking, error } = useTaskBreaker("combined");
-
-  // Use periwinkle palette for inattentive, violet for hyperactive
-  const colorPalette: ColorPalette = mode === "inattentive" ? periwinklePalette : violetPalette;
+  const { breakTask, isBreaking } = useTaskBreaker("combined");
+  const colorPalette: ColorPalette = combinedPalette;
 
   // Initialize confetti
   useEffect(() => {
@@ -103,53 +59,13 @@ export default function CombinedPage() {
     }
   }, []);
 
-  // Sync previousLevelRef after stats are loaded and mark initial mount as complete
-  useEffect(() => {
-    previousLevelRef.current = stats.level;
-    // Mark initial mount as complete after a brief delay to ensure stats are loaded
-    const timer = setTimeout(() => {
-      isInitialMountRef.current = false;
-    }, 100);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const getRandomMessage = () => {
-    const randomIndex = Math.floor(Math.random() * MOTIVATION_MESSAGES.length);
-    return MOTIVATION_MESSAGES[randomIndex];
-  };
-
-  // Set random motivation message on mount and when tasks are completed (for hyperactive mode)
-  useEffect(() => {
-    if (mode === "hyperactive") {
-      setMotivationMessage(getRandomMessage());
-
-      const handleTaskCompleted = () => {
-        setMotivationMessage(getRandomMessage());
-      };
-
-      window.addEventListener("taskCompleted", handleTaskCompleted);
-      return () => {
-        window.removeEventListener("taskCompleted", handleTaskCompleted);
-      };
-    }
-  }, [mode]);
-
-  const handleNewMessage = () => {
-    setMotivationMessage(getRandomMessage());
-  };
-
-  // Load today's tasks and task lists from localStorage
+  // Load data from localStorage
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     try {
-      // Load today's tasks (mode-specific)
-      const todayTasksKey = mode === "inattentive" 
-        ? TODAY_TASKS_KEY_INATTENTIVE 
-        : mode === "hyperactive" 
-        ? TODAY_TASKS_KEY_HYPERACTIVE 
-        : TODAY_TASKS_KEY_COMBINED;
-      const saved = window.localStorage.getItem(todayTasksKey);
+      // Load today's tasks
+      const saved = window.localStorage.getItem(TODAY_TASKS_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         const today = new Date().toDateString();
@@ -163,30 +79,28 @@ export default function CombinedPage() {
         } else {
           setTodayTasks([]);
           window.localStorage.setItem(
-            todayTasksKey,
+            TODAY_TASKS_KEY,
             JSON.stringify({ date: today, tasks: [] })
           );
         }
       }
 
-      // Load task lists based on current mode
-      const storageKey = mode === "inattentive" 
-        ? STORAGE_KEY_INATTENTIVE 
-        : mode === "hyperactive" 
-        ? STORAGE_KEY_HYPERACTIVE 
-        : STORAGE_KEY_COMBINED;
-      const savedLists = window.localStorage.getItem(storageKey);
+      // Load task lists from task manager storage
+      const savedLists = window.localStorage.getItem(STORAGE_KEY);
       if (savedLists) {
-        const parsed = JSON.parse(savedLists);
-        setTaskLists(parsed || []);
-        
-        // Initialize nextListId from existing lists
+        const parsed = JSON.parse(savedLists) as TaskList[];
+        // Add status to each list based on task completion
+        const listsWithStatus = parsed.map((list) => ({
+          ...list,
+          status: calculateStatus(list.tasks),
+        }));
+        setTaskLists(listsWithStatus);
         if (parsed && parsed.length > 0) {
           const maxListId = Math.max(...parsed.map((list: TaskList) => list.id));
           nextListId.current = maxListId + 1;
           const allTasks = parsed.flatMap((list: TaskList) => list.tasks);
           if (allTasks.length > 0) {
-            const maxTaskId = Math.max(...allTasks.map((t: { id: number }) => t.id));
+            const maxTaskId = Math.max(...allTasks.map((t: Task) => t.id));
             nextTaskId.current = Math.max(nextTaskId.current, maxTaskId + 1);
           }
         }
@@ -196,245 +110,79 @@ export default function CombinedPage() {
     }
 
     setIsHydrated(true);
-  }, [mode]);
+  }, []);
 
-  // Reload task lists when mode changes
+  // Save today's tasks to localStorage
   useEffect(() => {
     if (!isHydrated || typeof window === "undefined") return;
 
-    try {
-      const storageKey = mode === "inattentive" 
-        ? STORAGE_KEY_INATTENTIVE 
-        : mode === "hyperactive" 
-        ? STORAGE_KEY_HYPERACTIVE 
-        : STORAGE_KEY_COMBINED;
-      const savedLists = window.localStorage.getItem(storageKey);
-      if (savedLists) {
-        const parsed = JSON.parse(savedLists);
-        setTaskLists(parsed || []);
-        
-        // Initialize nextListId from existing lists
-        if (parsed && parsed.length > 0) {
-          const maxListId = Math.max(...parsed.map((list: TaskList) => list.id));
-          nextListId.current = maxListId + 1;
-          const allTasks = parsed.flatMap((list: TaskList) => list.tasks);
-          if (allTasks.length > 0) {
-            const maxTaskId = Math.max(...allTasks.map((t: { id: number }) => t.id));
-            nextTaskId.current = Math.max(nextTaskId.current, maxTaskId + 1);
-          }
-        }
-      } else {
-        setTaskLists([]);
-      }
-    } catch (error) {
-      console.error("Error loading task lists for mode:", error);
-    }
-  }, [mode, isHydrated]);
+            const today = new Date().toDateString();
+    window.localStorage.setItem(
+      TODAY_TASKS_KEY,
+      JSON.stringify({ date: today, tasks: todayTasks })
+    );
+  }, [todayTasks, isHydrated]);
 
-  // Listen for task completion events to refresh task lists
+  // Save task lists to task manager storage (without status field)
+  useEffect(() => {
+    if (!isHydrated || typeof window === "undefined") return;
+    // Remove status field before saving to match task manager format
+    const listsToSave = taskLists.map(({ status, ...list }) => list);
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(listsToSave));
+    // Dispatch event to notify task manager of changes
+    window.dispatchEvent(new CustomEvent("taskListUpdated"));
+  }, [taskLists, isHydrated]);
+
+  // Listen for changes from task manager
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const handleTaskUpdate = () => {
-      try {
-        const storageKey = mode === "inattentive" 
-          ? STORAGE_KEY_INATTENTIVE 
-          : mode === "hyperactive" 
-          ? STORAGE_KEY_HYPERACTIVE 
-          : STORAGE_KEY_COMBINED;
-        const savedLists = window.localStorage.getItem(storageKey);
-        if (savedLists) {
-          const parsed = JSON.parse(savedLists);
-          setTaskLists(parsed || []);
-        }
-      } catch (error) {
-        console.error("Error refreshing task lists:", error);
-      }
-    };
-
     const handleTaskListUpdate = () => {
-      // When task manager updates (hyperactive mode only), sync today's tasks if they have sourceListId
-      if (mode === "hyperactive") {
         try {
-          const storageKey = STORAGE_KEY_HYPERACTIVE;
-          const savedLists = window.localStorage.getItem(storageKey);
+        const savedLists = window.localStorage.getItem(STORAGE_KEY);
           if (savedLists) {
-            const parsed: TaskList[] = JSON.parse(savedLists);
-            setTaskLists(parsed);
-            
-            // Update today's tasks to match task manager state
-            setTodayTasks((todayTasks) => {
-              return todayTasks.map((todayTask) => {
-                if (todayTask.sourceListId) {
-                  const sourceList = parsed.find((list) => list.id === todayTask.sourceListId);
-                  if (sourceList) {
-                    const sourceTask = sourceList.tasks.find((t) => t.id === todayTask.id);
-                    if (sourceTask && sourceTask.done !== todayTask.done) {
-                      // State changed - sync it (gamification already handled in TaskList)
-                      return { ...todayTask, done: sourceTask.done };
-                    }
-                  }
-                }
-                return todayTask;
-              });
-            });
+          const parsed = JSON.parse(savedLists) as TaskList[];
+          // Add status to each list based on task completion
+          const listsWithStatus = parsed.map((list) => ({
+            ...list,
+            status: calculateStatus(list.tasks),
+          }));
+          setTaskLists(listsWithStatus);
           }
         } catch (error) {
           console.error("Error syncing with task manager:", error);
-        }
       }
     };
 
-    const handleTodayTasksUpdate = () => {
-      // When today's tasks are updated from task manager (hyperactive mode only), refresh from localStorage
-      if (mode === "hyperactive") {
-        try {
-          const todayTasksKey = TODAY_TASKS_KEY_HYPERACTIVE;
-          const saved = window.localStorage.getItem(todayTasksKey);
-          if (saved) {
-            const parsed = JSON.parse(saved);
-            const today = new Date().toDateString();
-            if (parsed.date === today) {
-              const tasks = parsed.tasks || [];
-              setTodayTasks(tasks);
-            }
-          }
-        } catch (error) {
-          console.error("Error refreshing today's tasks:", error);
-        }
-      }
-    };
-
-    window.addEventListener("taskCompleted", handleTaskUpdate);
-    if (mode === "hyperactive") {
       window.addEventListener("taskListUpdated", handleTaskListUpdate);
-      window.addEventListener("todayTasksUpdated", handleTodayTasksUpdate);
-    }
-    // Also listen for storage changes
-    window.addEventListener("storage", handleTaskUpdate);
+    window.addEventListener("storage", handleTaskListUpdate);
 
     return () => {
-      window.removeEventListener("taskCompleted", handleTaskUpdate);
-      if (mode === "hyperactive") {
         window.removeEventListener("taskListUpdated", handleTaskListUpdate);
-        window.removeEventListener("todayTasksUpdated", handleTodayTasksUpdate);
-      }
-      window.removeEventListener("storage", handleTaskUpdate);
+      window.removeEventListener("storage", handleTaskListUpdate);
     };
-  }, [mode]);
+  }, []);
 
-  // Save today's tasks to localStorage (mode-specific)
-  useEffect(() => {
-    if (!isHydrated || typeof window === "undefined") return;
-
-    const today = new Date().toDateString();
-    const todayTasksKey = mode === "inattentive" 
-      ? TODAY_TASKS_KEY_INATTENTIVE 
-      : mode === "hyperactive" 
-      ? TODAY_TASKS_KEY_HYPERACTIVE 
-      : TODAY_TASKS_KEY_COMBINED;
-    window.localStorage.setItem(
-      todayTasksKey,
-      JSON.stringify({ date: today, tasks: todayTasks })
-    );
-  }, [todayTasks, isHydrated, mode]);
-
-  // Save task lists to localStorage (mode-specific)
-  useEffect(() => {
-    if (!isHydrated || typeof window === "undefined") return;
-    const storageKey = mode === "inattentive" 
-      ? STORAGE_KEY_INATTENTIVE 
-      : mode === "hyperactive" 
-      ? STORAGE_KEY_HYPERACTIVE 
-      : STORAGE_KEY_COMBINED;
-    window.localStorage.setItem(storageKey, JSON.stringify(taskLists));
-  }, [taskLists, isHydrated, mode]);
-
-  const handleTaskToggle = (taskId: number) => {
-    setTodayTasks((tasks) => {
-      const task = tasks.find((t) => t.id === taskId);
-      if (!task) return tasks;
-      
-      const newDone = !task.done;
-      
-      // For hyperactive mode: sync with task manager if this task is linked to a task list
-      if (mode === "hyperactive" && task.sourceListId && typeof window !== "undefined") {
-        try {
-          const storageKey = STORAGE_KEY_HYPERACTIVE;
-          const savedLists = window.localStorage.getItem(storageKey);
-          if (savedLists) {
-            const parsed: TaskList[] = JSON.parse(savedLists);
-            const updatedLists = parsed.map((list) => {
-              if (list.id === task.sourceListId) {
-                return {
-                  ...list,
-                  tasks: list.tasks.map((t) =>
-                    t.id === taskId ? { ...t, done: newDone } : t
-                  ),
-                };
-              }
-              return list;
-            });
-            window.localStorage.setItem(storageKey, JSON.stringify(updatedLists));
-            setTaskLists(updatedLists);
-            // Dispatch event to notify task manager of the change
-            window.dispatchEvent(new CustomEvent("taskListUpdated"));
-          }
-        } catch (error) {
-          console.error("Error syncing task with task manager:", error);
-        }
-      }
-      
-      // Handle gamification: award XP when checking, revoke when unchecking
-      if (typeof window !== "undefined") {
-        if (newDone && !task.done) {
-          // Marking as done – award XP
-          awardXPForTask();
-        } else if (!newDone && task.done) {
-          // Unchecking a completed task – revoke XP
-          revokeXPForTaskCompletion();
-        }
-        // Notify listeners that gamification stats changed
-        window.dispatchEvent(new CustomEvent("taskCompleted"));
-      }
-      
-      return tasks.map((t) => (t.id === taskId ? { ...t, done: newDone } : t));
-    });
-  };
-
-  const handleRemoveTask = (taskId: number) => {
-    setTodayTasks((tasks) => {
-      if (typeof window !== "undefined") {
-        const task = tasks.find((t) => t.id === taskId);
-        // Apply a small penalty only if the task was never completed
-        if (task && !task.done) {
-          penalizeXPForUncompletedTask();
-          window.dispatchEvent(new CustomEvent("taskCompleted"));
-        }
-      }
-      return tasks.filter((task) => task.id !== taskId);
-    });
-  };
-
-  const handleAddTasks = (tasks: Array<{ id: number; text: string; done: boolean; sourceListId?: number; sourceListName?: string }>) => {
-    if (mode === "inattentive") {
-      setTodayTasks((prev) => {
-        const existingIds = new Set(prev.map(t => t.id));
-        const newTasks = tasks.filter(t => !existingIds.has(t.id));
-        return [...newTasks, ...prev];
-      });
-    } else {
-      setTodayTasks((prev) => [...prev, ...tasks]);
-    }
-  };
 
   const addTask = (text: string) => {
     const t = text.trim();
     if (!t) return;
+
+    // Add to Today's List
     const newTask: Task = { id: nextTaskId.current++, text: t, done: false };
     setTodayTasks((prev) => [...prev, newTask]);
+
+    // Create a new task list in task manager with this single task
+    const newList: TaskList = {
+      id: nextListId.current++,
+      name: t,
+      tasks: [{ id: newTask.id, text: t, done: false }],
+      status: "todo",
+    };
+
+    setTaskLists((prev) => [...prev, newList]);
     setInput("");
-    focusInput();
+    inputRef.current?.focus();
   };
 
   const handleBreakTasks = async (text: string) => {
@@ -446,7 +194,6 @@ export default function CombinedPage() {
     
     try {
       const subTasks = await breakTask(taskText, "combined");
-      console.log("combined page: subTasks", subTasks);
       if (subTasks && subTasks.length === 0) {
         setIsBreakTasksModalOpen(false);
         alert("No sub-tasks were generated. Please try again.");
@@ -465,7 +212,7 @@ export default function CombinedPage() {
     setOriginalTaskText("");
     setIsBreakTasksModalOpen(false);
     setInput("");
-    focusInput();
+    inputRef.current?.focus();
   };
 
   const handleAddBrokenTasks = (brokenTasksList: Array<{ id: number; text: string }>) => {
@@ -481,112 +228,130 @@ export default function CombinedPage() {
       done: false,
     }));
 
-    // Create a new task list with the broken tasks
+    // Add to Today's List
+    const todayTasksToAdd: Task[] = tasksWithIds.map((task) => ({
+      id: task.id,
+      text: task.text,
+      done: false,
+    }));
+    setTodayTasks((prev) => [...prev, ...todayTasksToAdd]);
+
+    // Create a new task list in task manager with the broken tasks
     const newListName = originalTaskText.slice(0, 30) + (originalTaskText.length > 30 ? "..." : "");
     const newList: TaskList = {
       id: nextListId.current++,
       name: newListName,
-      tasks: tasksWithIds.map((task) => ({
-        id: task.id,
-        text: task.text,
-        done: false,
-      })),
+      tasks: tasksWithIds,
+      status: "todo",
     };
 
-    // Add the new list to task lists
     setTaskLists((prev) => [...prev, newList]);
-
-    // Add tasks to today's tasks
-    const todayTasksWithIds: Task[] = tasksWithIds.map((task) => ({
-      ...task,
-      sourceListId: newList.id,
-      sourceListName: newList.name,
-    }));
-
-    setTodayTasks((prev) => {
-      // Filter out duplicates based on text content
-      const existingTexts = new Set(prev.map((t) => t.text.toLowerCase().trim()));
-      const newTasks = todayTasksWithIds.filter(
-        (t) => !existingTexts.has(t.text.toLowerCase().trim())
-      );
-      // Add to beginning for inattentive mode, end for hyperactive mode
-      if (mode === "inattentive") {
-        return [...newTasks, ...prev];
-      } else {
-        return [...prev, ...newTasks];
-      }
-    });
 
     // Clean up
     setBrokenTasks([]);
     setOriginalTaskText("");
     setIsBreakTasksModalOpen(false);
     setInput("");
-    focusInput();
+    inputRef.current?.focus();
   };
 
-  const existingTaskIds = new Set(todayTasks.map((t) => t.id));
-  const completedToday = todayTasks.filter((t) => t.done).length;
-  const totalToday = todayTasks.length;
-  const allTasksCompleted = totalToday > 0 && completedToday === totalToday;
+  const handleTaskToggle = (listId: number, taskId: number) => {
+    setTaskLists((lists) => {
+      return lists.map((list) => {
+        if (list.id === listId) {
+          const updatedTasks = list.tasks.map((t) =>
+            t.id === taskId ? { ...t, done: !t.done } : t
+          );
+          
+          const newStatus = calculateStatus(updatedTasks);
 
-  // Calculate overall task statistics (for hyperactive mode)
-  const allTasks = taskLists.flatMap((list) => list.tasks);
-  const totalTasks = allTasks.length;
-  const completedTasks = allTasks.filter((t) => t.done).length;
-  const overallCompletionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
-
-  // Calculate completion rate per task list (for hyperactive mode)
-  const listProgress = taskLists.map((list) => {
-    const total = list.tasks.length;
-    const completed = list.tasks.filter((t) => t.done).length;
-    const rate = total > 0 ? (completed / total) * 100 : 0;
-    return {
-      name: list.name,
-      completed,
-      total,
-      rate,
-    };
-  });
-
-  // Get the next incomplete task (for inattentive mode)
-  const nextTask = todayTasks.find((t) => !t.done);
-
-  // Trigger confetti when all tasks are completed (for both modes)
-  useEffect(() => {
-    if (allTasksCompleted && confettiRef.current && !hasTriggeredConfettiRef.current) {
-      hasTriggeredConfettiRef.current = true;
+          // Trigger confetti when moving to done
+          if (newStatus === "done" && list.status !== "done" && confettiRef.current) {
       confettiRef.current.addConfetti({
         emojis: ["🎉", "✨", "🌟", "💫", "🎊"],
         emojiSize: 100,
         confettiNumber: 50,
       });
-    } else if (!allTasksCompleted) {
-      // Reset the flag when tasks become incomplete again
-      hasTriggeredConfettiRef.current = false;
-    }
-  }, [allTasksCompleted]);
+          }
 
-  // Trigger confetti when leveling up (skip on initial mount)
-  useEffect(() => {
-    if (isInitialMountRef.current) return;
-    
-    if (stats.level > previousLevelRef.current && confettiRef.current) {
-      previousLevelRef.current = stats.level;
-      confettiRef.current.addConfetti({
-        emojis: ["🏆", "⭐", "🎉", "🌟", "✨", "💎"],
-        emojiSize: 100,
-        confettiNumber: 60,
+          // Also update today's tasks if they share the same ID
+          setTodayTasks((todayTasks) =>
+            todayTasks.map((task) =>
+              task.id === taskId ? { ...task, done: !task.done } : task
+            )
+          );
+
+          return {
+            ...list,
+            tasks: updatedTasks,
+            status: newStatus,
+          };
+        }
+        return list;
       });
-    }
-  }, [stats.level]);
+    });
+  };
+
+  const handleRemoveTask = (listId: number, taskId: number) => {
+    setTaskLists((lists) =>
+      lists.map((list) => {
+        if (list.id === listId) {
+          const newTasks = list.tasks.filter((t) => t.id !== taskId);
+          // If no tasks left, remove the list
+          if (newTasks.length === 0) {
+            return null;
+          }
+          return { ...list, tasks: newTasks };
+        }
+        return list;
+      }).filter((list): list is TaskList => list !== null)
+    );
+  };
+
+  const handleTodayTaskToggle = (taskId: number) => {
+    setTodayTasks((tasks) =>
+      tasks.map((t) => (t.id === taskId ? { ...t, done: !t.done } : t))
+    );
+  };
+
+  const handleRemoveTodayTask = (taskId: number) => {
+    setTodayTasks((tasks) => tasks.filter((t) => t.id !== taskId));
+  };
+
+  const handleAddTodayTask = (text: string) => {
+    const t = text.trim();
+    if (!t) return;
+    const newTask: Task = { id: nextTaskId.current++, text: t, done: false };
+    setTodayTasks((prev) => [...prev, newTask]);
+  };
+
+  const handleAddTasks = (tasks: Array<{ id: number; text: string; done: boolean; sourceListId?: number; sourceListName?: string }>) => {
+    setTodayTasks((prev) => [...prev, ...tasks]);
+  };
+
+  const existingTaskIds = new Set(todayTasks.map((t) => t.id));
+  const completedToday = todayTasks.filter((t) => t.done).length;
+  const totalToday = todayTasks.length;
+
+  // Update status for all lists based on current task completion
+  const listsWithUpdatedStatus = taskLists.map((list) => ({
+    ...list,
+    status: calculateStatus(list.tasks),
+  }));
+
+  const todoLists = listsWithUpdatedStatus.filter((list) => list.status === "todo");
+  const doingLists = listsWithUpdatedStatus.filter((list) => list.status === "doing");
+  const doneLists = listsWithUpdatedStatus.filter((list) => list.status === "done");
+
+  // Get the next incomplete task for calm mode
+  const nextTask = todayTasks.find((t) => !t.done);
 
   return (
-    <div className={`min-h-screen ${mode === "inattentive" ? "bg-white" : "bg-gradient-to-br from-rose-50 via-white to-slate-100"}`}>
+    <div className="h-screen overflow-hidden bg-gradient-to-br from-[#EFEFD0] via-[#F7C59F]/20 to-[#EFEFD0] flex flex-col">
       {/* Navigation Bar */}
-      <nav className={`border-b ${mode === "inattentive" ? "border-[#7085FF]/10" : "border-black/5"} bg-white/90 backdrop-blur-sm`}>
+      <nav className="flex-shrink-0 border-b border-[#004E89]/10 bg-white/90 backdrop-blur-sm">
         <div className="flex items-center justify-between px-4 py-3">
-          <Link href="/combined" className={`${mode === "inattentive" ? "text-[#7085FF]" : "text-violet-600"} transition-colors ${mode === "inattentive" ? "hover:text-[#5A75FF]" : "hover:text-violet-700"}`}>
+          <Link href="/combined" className="flex items-center gap-2 text-[#004E89] transition-colors hover:text-[#1A659E]">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
@@ -599,162 +364,115 @@ export default function CombinedPage() {
                 clipRule="evenodd"
               />
             </svg>
+            <span className="text-lg font-semibold">Dynamic Worker</span>
           </Link>
-          <div className="flex items-center gap-4">
-            {/* Mode Toggle */}
-            <div className="flex items-center rounded-full border-2 border-violet-200 bg-white p-1 shadow-sm">
+          <div className="flex items-center gap-3">
+            {/* Chaos/Calm Toggle */}
+            <div className="flex items-center rounded-full border-2 border-[#004E89]/30 bg-white/80 p-1 shadow-sm">
               <button
                 type="button"
-                onClick={() => setMode("hyperactive")}
+                onClick={() => setMode("chaos")}
                 className={`px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wide transition-all ${
-                  mode === "hyperactive"
-                    ? "bg-violet-600 text-white shadow-md"
-                    : "text-violet-600 hover:bg-violet-50"
+                  mode === "chaos"
+                    ? "bg-[#FF6B35] text-white shadow-md"
+                    : "text-[#004E89] hover:bg-[#F7C59F]/20"
                 }`}
               >
-                Hyperactive
+                Chaos
               </button>
               <button
                 type="button"
-                onClick={() => setMode("inattentive")}
+                onClick={() => setMode("calm")}
                 className={`px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wide transition-all ${
-                  mode === "inattentive"
-                    ? "bg-violet-600 text-white shadow-md"
-                    : "text-violet-600 hover:bg-violet-50"
+                  mode === "calm"
+                    ? "bg-[#004E89] text-white shadow-md"
+                    : "text-[#004E89] hover:bg-[#F7C59F]/20"
                 }`}
               >
-                Inattentive
+                Calm
               </button>
             </div>
             <Link
               href="/tasks?mode=combined"
-              className={`${mode === "inattentive" ? "text-lg font-medium text-gray-900" : "rounded-lg px-4 py-2 text-sm font-medium text-zinc-700"} transition-colors ${mode === "inattentive" ? "hover:text-gray-700" : "hover:bg-zinc-100"}`}
+              className="rounded-lg px-4 py-2 text-sm font-medium text-[#004E89] transition-colors hover:bg-[#F7C59F]/20"
             >
-              {mode === "inattentive" ? "Tasks" : "Task Manager"}
+              Task Manager
             </Link>
             <button
               onClick={() => setIsFocusModalOpen(true)}
-              className={`rounded-lg ${colorPalette.accent} ${mode === "inattentive" ? "px-6 py-2 text-lg" : "px-4 py-2 text-sm"} font-medium text-white transition-colors ${colorPalette.accentHover}`}
+              className={`rounded-lg ${colorPalette.accent} px-4 py-2 text-sm font-medium text-white transition-colors ${colorPalette.accentHover}`}
             >
-              {mode === "inattentive" ? "Focus" : "Focus Mode"}
+              Focus Mode
             </button>
           </div>
         </div>
       </nav>
 
-      {mode === "inattentive" ? (
-        /* Inattentive Mode - 2 Column Layout */
-        <main className="flex h-[calc(100vh-73px)] gap-8 p-8">
-          {/* Left Column - Next Step */}
-          <div className="flex-1 rounded-3xl border-2 border-[#7085FF]/20 bg-white p-12 flex flex-col justify-center">
-            <h2 className="text-4xl font-bold text-gray-900 mb-8">Next Step</h2>
-            
-            {nextTask ? (
-              <div className="space-y-6">
-                <div className="flex items-start gap-6">
-                  <input
-                    type="checkbox"
-                    checked={nextTask.done}
-                    onChange={() => handleTaskToggle(nextTask.id)}
-                    className="h-8 w-8 cursor-pointer rounded border-2 border-[#7085FF]/60 bg-white text-[#7085FF] focus:ring-2 focus:ring-[#7085FF]/30 focus:border-[#7085FF] checked:bg-[#7085FF] checked:border-[#7085FF] mt-1 transition-colors"
-                  />
-                  <p className="text-3xl font-medium text-gray-900 leading-relaxed flex-1">
-                    {nextTask.text}
-                  </p>
-                </div>
-                
-                {/* Action buttons */}
-                <div className="flex flex-col gap-4 mt-8">
-                  <button
-                    onClick={() => setIsFocusModalOpen(true)}
-                    className={`text-xl font-semibold ${colorPalette.accent} px-6 py-3 text-white rounded-xl transition-colors ${colorPalette.accentHover}`}
-                  >
-                    Focus Mode
-                  </button>
-                  <button
-                    onClick={() => setIsAddTasksModalOpen(true)}
-                    className={`text-xl font-semibold border-2 border-[#7085FF] text-[#7085FF] px-6 py-3 rounded-xl transition-colors hover:bg-[#7085FF]/10`}
-                  >
-                    Add More Tasks
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                <p className="text-3xl font-medium text-gray-400 leading-relaxed">
-                  {todayTasks.length === 0 
-                    ? "Lets get started!" 
-                    : "All tasks completed! 🎉"}
-                </p>
-                <div className="flex flex-col gap-4 mt-6">
-                  <button
-                    onClick={() => setIsFocusModalOpen(true)}
-                    className={`text-xl font-semibold ${colorPalette.accent} px-6 py-3 text-white rounded-xl transition-colors ${colorPalette.accentHover}`}
-                  >
-                    Focus Mode
-                  </button>
-                  <button
-                    onClick={() => setIsAddTasksModalOpen(true)}
-                    className={`text-xl font-semibold border-2 border-[#7085FF] text-[#7085FF] px-6 py-3 rounded-xl transition-colors hover:bg-[#7085FF]/10`}
-                  >
-                    Add Tasks
-                  </button>
+      {/* Progress Bar */}
+      {totalToday > 0 && (
+        <div className="flex-shrink-0 border-b border-[#004E89]/10 bg-white/50 px-4 py-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-[#004E89]">Today&apos;s Progress</span>
+            <span className="text-sm font-medium text-[#1A659E]">{completedToday}/{totalToday}</span>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-[#F7C59F]/30">
+            <div
+              className="h-full rounded-full bg-[#FF6B35] transition-all duration-500"
+              style={{ width: `${(completedToday / totalToday) * 100}%` }}
+            />
                 </div>
               </div>
             )}
-          </div>
 
-          {/* Right Column - Today's List */}
-          <div className="flex-1 rounded-3xl border-2 border-[#7085FF]/20 bg-white p-12 flex flex-col">
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-5xl font-bold text-gray-900">Today&apos;s List</h2>
-              </div>
+      {/* Main Layout */}
+      <main className="flex-1 flex gap-4 p-4 overflow-hidden min-h-0">
+        {mode === "calm" ? (
+          <>
+            {/* Left Column - Today's List (50%) */}
+            <div className="w-1/2 rounded-2xl border border-[#004E89]/20 bg-white/90 p-6 shadow-lg flex flex-col min-h-0">
+          <div className="mb-4 flex-shrink-0">
+            <h2 className="text-2xl font-semibold text-[#004E89]">Today&apos;s List</h2>
             </div>
 
-            <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto mb-4 min-h-0">
               {todayTasks.length === 0 ? (
-                <div className="flex h-full items-center justify-center rounded-xl border-2 border-dashed border-[#7085FF]/20 bg-[#7085FF]/5 p-12 text-center">
-                  <p className="text-2xl text-gray-700">
-                   Let's add some tasks!
+              <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-[#004E89]/20 bg-[#F7C59F]/10 p-8 text-center">
+                <p className="text-sm text-[#004E89]/60">
+                  No tasks for today. Add some tasks to get started!
                   </p>
                 </div>
               ) : (
-                <ul className="space-y-4">
+              <ul className="space-y-2">
                   {todayTasks.map((task) => (
                     <li
                       key={task.id}
-                      className={`flex items-start gap-6 rounded-2xl border-2 ${
-                        task.done 
-                          ? "border-[#7085FF]/10 bg-[#7085FF]/5" 
-                          : "border-[#7085FF]/20 bg-white"
-                      } p-6 transition-colors`}
+                    className="flex items-center gap-3 rounded-xl border border-[#004E89]/20 bg-white p-3 transition-colors hover:bg-[#F7C59F]/10"
                     >
                       <input
                         type="checkbox"
                         checked={task.done}
-                        onChange={() => handleTaskToggle(task.id)}
-                        className="h-8 w-8 cursor-pointer rounded border-2 border-[#7085FF]/60 bg-white text-[#7085FF] focus:ring-2 focus:ring-[#7085FF]/30 focus:border-[#7085FF] checked:bg-[#7085FF] checked:border-[#7085FF] mt-1 transition-colors"
+                      onChange={() => handleTodayTaskToggle(task.id)}
+                      className="h-4 w-4 cursor-pointer rounded border-[#004E89]/40 text-[#FF6B35] focus:ring-[#FF6B35]"
                       />
                       <div className="flex-1 min-w-0">
                         <p
-                          className={`text-2xl leading-relaxed ${
-                            task.done ? "line-through text-gray-400" : "text-gray-900"
+                        className={`text-sm truncate ${
+                          task.done ? "line-through text-[#004E89]/40" : "text-[#004E89]"
                           }`}
                         >
                           {task.text}
                         </p>
                       </div>
                       <button
-                        onClick={() => handleRemoveTask(task.id)}
-                        className="flex-shrink-0 rounded-lg p-2 text-gray-400 transition-colors hover:text-red-500"
+                      onClick={() => handleRemoveTodayTask(task.id)}
+                      className="flex-shrink-0 rounded p-1 text-[#004E89]/40 transition-colors hover:text-red-500"
                         aria-label="Remove task"
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           viewBox="0 0 20 20"
                           fill="currentColor"
-                          className="h-6 w-6"
+                        className="h-4 w-4"
                         >
                           <path
                             fillRule="evenodd"
@@ -769,10 +487,10 @@ export default function CombinedPage() {
               )}
             </div>
 
-            {/* Input area - Small and Simple */}
-            <div className="mt-6 border-t border-[#7085FF]/10 pt-4 flex items-center gap-2">
+          {/* Input area */}
+          <div className="flex-shrink-0 border-t border-[#004E89]/10 pt-4 flex items-center gap-2">
               <input
-                ref={inputRef as React.RefObject<HTMLInputElement>}
+              ref={inputRef}
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -783,148 +501,69 @@ export default function CombinedPage() {
                   }
                 }}
                 placeholder="Add task..."
-                className="flex-1 rounded-lg border border-[#7085FF]/20 bg-white px-3 py-2 text-base text-gray-900 placeholder:text-gray-400 focus:border-[#7085FF] focus:outline-none"
+              className="flex-1 rounded-lg border border-[#004E89]/20 bg-white px-3 py-2 text-sm text-[#004E89] placeholder:text-[#004E89]/40 focus:border-[#FF6B35] focus:outline-none"
               />
               <button
                 onClick={() => addTask(input)}
-                className={`rounded-lg ${colorPalette.accent} px-4 py-2 text-base font-medium text-white transition ${colorPalette.accentHover}`}
+              className={`rounded-lg ${colorPalette.accent} px-3 py-2 text-sm font-medium text-white transition ${colorPalette.accentHover}`}
               >
                 Add
               </button>
               <button
                 onClick={() => handleBreakTasks(input)} 
                 disabled={isBreaking}
-                title={isBreaking ? "Breaking down task..." : "Break down task using AI"}
-                className={`text-base font-medium border-2 border-[#7085FF] text-[#7085FF] px-4 py-2 rounded-lg transition-colors hover:bg-[#7085FF]/10 disabled:opacity-50 disabled:cursor-not-allowed`}
+              className="rounded-lg border border-[#004E89]/20 bg-white px-3 py-2 text-sm font-medium text-[#004E89] transition-colors hover:bg-[#F7C59F]/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Break down task using AI"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-5">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-4">
                   <path d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684ZM13.949 13.684a1 1 0 0 0-1.898 0l-.184.551a1 1 0 0 1-.632.633l-.551.183a1 1 0 0 0 0 1.898l.551.183a1 1 0 0 1 .633.633l.183.551a1 1 0 0 0 1.898 0l.184-.551a1 1 0 0 1 .632-.633l.551-.183a1 1 0 0 0 0-1.898l-.551-.184a1 1 0 0 1-.633-.632l-.183-.551Z" />
                 </svg>
               </button>
             </div>
-          </div>
-        </main>
-      ) : (
-        /* Hyperactive Mode - 3 Column Layout */
-        <main className="flex h-[calc(100vh-73px)] gap-2 p-2">
-          {/* Left Column - Overall Progress & Gamification */}
-          <div className={`flex-1 rounded-2xl border ${colorPalette.border} bg-gradient-to-br ${colorPalette.bg} p-6 shadow-lg ${colorPalette.shadow} flex flex-col overflow-y-auto`}>
-            <div className="space-y-6">
-              {/* Level & XP */}
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.4em] text-zinc-500">
-                  Your Progress
-                </p>
-                <div className="flex items-baseline gap-3">
-                  <h2 className="text-3xl font-bold text-zinc-900">Level {stats.level}</h2>
-                  <span className={`text-lg font-semibold ${colorPalette.text}`}>{stats.totalXP} XP</span>
-                </div>
-                <p className="text-sm text-zinc-600">
-                  {stats.tasksCompletedToday} task{stats.tasksCompletedToday !== 1 ? "s" : ""} completed today
-                </p>
               </div>
 
-              {/* Level Progress Bar */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs font-medium text-zinc-600">
-                  <span>Progress to Level {stats.level + 1}</span>
-                  <span>{stats.currentLevelXP}/100 XP</span>
-                </div>
-                <div className="h-3 w-full overflow-hidden rounded-full bg-zinc-200">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-violet-500 to-rose-500 transition-all duration-500"
-                    style={{ width: `${progressPercentage}%` }}
-                  />
-                </div>
-              </div>
+            {/* Right Column - Next Step (50%) */}
+            <div className="w-1/2 rounded-2xl border-2 border-[#004E89]/20 bg-white p-12 flex flex-col justify-center min-h-0">
+              <h2 className="text-3xl font-bold text-[#004E89] mb-8">Next Step</h2>
 
-              {/* Overall Task Completion */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs font-medium text-zinc-600">
-                  <span>Overall Completion</span>
-                  <span>{completedTasks}/{totalTasks} tasks</span>
-                </div>
-                <div className="h-3 w-full overflow-hidden rounded-full bg-zinc-200">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-sky-500 to-violet-500 transition-all duration-500"
-                    style={{ width: `${overallCompletionRate}%` }}
-                  />
-                </div>
-                <p className="text-xs text-zinc-500">{Math.round(overallCompletionRate)}% complete</p>
-              </div>
-
-              {/* Stats Cards */}
-              {/* <div className="grid grid-cols-2 gap-3">
-                <div className={`rounded-xl border ${colorPalette.borderLight} bg-white/80 p-3`}>
-                  <p className="text-xs text-zinc-500">Total Tasks</p>
-                  <p className={`text-2xl font-bold ${colorPalette.textDark}`}>{stats.tasksCompleted}</p>
-                </div>
-                <div className="rounded-xl border border-rose-200 bg-white/80 p-3">
-                  <p className="text-xs text-zinc-500">Today</p>
-                  <p className="text-2xl font-bold text-rose-900">{stats.tasksCompletedToday}</p>
-                </div>
-              </div> */}
-
-              {/* Motivation Message */}
-              {motivationMessage && (
-                <div className={`rounded-xl border ${colorPalette.borderLight} bg-gradient-to-br ${colorPalette.bg} p-4`}>
-                  <div className="flex items-center justify-between gap-2">
-                    <p className={`text-sm font-medium ${colorPalette.textDark} flex-1 text-center`}>
-                      {motivationMessage}
+              {nextTask ? (
+                <div className="space-y-6">
+                  <div className="flex items-start gap-6">
+                    <input
+                      type="checkbox"
+                      checked={nextTask.done}
+                      onChange={() => handleTodayTaskToggle(nextTask.id)}
+                      className="h-7 w-7 cursor-pointer rounded border-2 border-[#004E89]/60 bg-white text-[#004E89] focus:ring-2 focus:ring-[#004E89]/30 focus:border-[#004E89] checked:bg-[#004E89] checked:border-[#004E89] mt-1 transition-colors"
+                    />
+                    <p className="text-2xl font-medium text-[#004E89] leading-relaxed flex-1">
+                      {nextTask.text}
                     </p>
-                    <button
-                      onClick={handleNewMessage}
-                      className={`flex-shrink-0 rounded-lg p-1.5 ${colorPalette.text} transition-colors ${colorPalette.accentLight.replace('bg-', 'hover:bg-')}`}
-                      aria-label="Get new message"
-                      title="Get new message"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                        className="h-4 w-4"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M15.312 11.424a5.5 5.5 0 0 1-9.201 2.466l-.312-.311h2.433a.75.75 0 0 0 0-1.5H3.989a.75.75 0 0 0-.75.75v4.242a.75.75 0 0 0 1.5 0v-2.43l.31.31a7 7 0 0 0 11.712-3.138.75.75 0 0 0-1.449-.39Zm1.23-3.723a.75.75 0 0 0 .219-.53V2.929a.75.75 0 0 0-1.5 0V5.36l-.31-.31A7 7 0 0 0 3.239 8.188a.75.75 0 1 0 1.448.389A5.5 5.5 0 0 1 13.89 6.11l.311.31h-2.432a.75.75 0 0 0 0 1.5h4.243a.75.75 0 0 0 .53-.219Z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </button>
-                  </div>
+                </div>
+              </div>
+              ) : (
+                <div className="space-y-6">
+                  <p className="text-2xl font-medium text-[#004E89]/60 leading-relaxed">
+                    {todayTasks.length === 0 
+                      ? "Let's get started!" 
+                      : "All tasks completed! 🎉"}
+                  </p>
                 </div>
               )}
             </div>
+          </>
+        ) : (
+          <>
+            {/* Left Column - Today's List (30%) */}
+            <div className="w-[30%] rounded-2xl border border-[#004E89]/20 bg-white/90 p-6 shadow-lg flex flex-col min-h-0">
+              <div className="mb-4 flex-shrink-0">
+                <h2 className="text-2xl font-semibold text-[#004E89]">Today&apos;s List</h2>
           </div>
 
-          {/* Middle Column - Today's Task List */}
-          <div className="flex-[2] rounded-2xl border border-black/5 bg-white/90 p-6 shadow-lg shadow-black/5 flex flex-col">
-            <div className="mb-4">
-              <div className="flex items-center justify-between mb-2">
-                <h2 className="text-3xl font-semibold text-zinc-900">Today&apos;s Tasks</h2>
-                <button
-                  onClick={() => setIsAddTasksModalOpen(true)}
-                  className={`rounded-lg p-1.5 ${colorPalette.text} transition-colors ${colorPalette.accentLight.replace('bg-', 'hover:bg-')}`}
-                  title="Add tasks from task lists"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                    className="h-4 w-4"
-                  >
-                    <path d="M3 4.25A2.25 2.25 0 0 1 5.25 2h5.5A2.25 2.25 0 0 1 13 4.25v2a.75.75 0 0 1-1.5 0v-2a.75.75 0 0 0-.75-.75h-5.5a.75.75 0 0 0-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 0 0 .75-.75v-2a.75.75 0 0 1 1.5 0v2A2.25 2.25 0 0 1 10.75 18h-5.5A2.25 2.25 0 0 1 3 15.75V4.25Z" />
-                    <path d="M19 10a.75.75 0 0 0-.75-.75H8.704l1.048-.943a.75.75 0 1 0-1.004-1.114l-2.5 2.25a.75.75 0 0 0 0 1.114l2.5 2.25a.75.75 0 1 0 1.004-1.114l-1.048-.943h9.546A.75.75 0 0 0 19 10Z" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-y-auto mb-4 min-h-0">
               {todayTasks.length === 0 ? (
-                <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-zinc-200 bg-zinc-50 p-8 text-center">
-                  <p className="text-sm text-zinc-500">
-                    No tasks for today. Add tasks from your task lists to get started!
+                  <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-[#004E89]/20 bg-[#F7C59F]/10 p-8 text-center">
+                    <p className="text-sm text-[#004E89]/60">
+                      No tasks for today. Add some tasks to get started!
                   </p>
                 </div>
               ) : (
@@ -932,29 +571,26 @@ export default function CombinedPage() {
                   {todayTasks.map((task) => (
                     <li
                       key={task.id}
-                      className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-white p-3 transition-colors hover:bg-zinc-50"
+                        className="flex items-center gap-3 rounded-xl border border-[#004E89]/20 bg-white p-3 transition-colors hover:bg-[#F7C59F]/10"
                     >
                       <input
                         type="checkbox"
                         checked={task.done}
-                        onChange={() => handleTaskToggle(task.id)}
-                        className="h-4 w-4 cursor-pointer rounded border-zinc-300 text-violet-600 focus:ring-violet-500"
+                          onChange={() => handleTodayTaskToggle(task.id)}
+                          className="h-4 w-4 cursor-pointer rounded border-[#004E89]/40 text-[#FF6B35] focus:ring-[#FF6B35]"
                       />
                       <div className="flex-1 min-w-0">
                         <p
                           className={`text-sm truncate ${
-                            task.done ? "line-through text-zinc-400" : "text-zinc-900"
+                              task.done ? "line-through text-[#004E89]/40" : "text-[#004E89]"
                           }`}
                         >
                           {task.text}
                         </p>
-                        {task.sourceListName && (
-                          <p className="mt-1 text-xs text-zinc-500">from {task.sourceListName}</p>
-                        )}
                       </div>
                       <button
-                        onClick={() => handleRemoveTask(task.id)}
-                        className="flex-shrink-0 rounded p-1 text-zinc-400 transition-colors hover:text-red-500"
+                          onClick={() => handleRemoveTodayTask(task.id)}
+                          className="flex-shrink-0 rounded p-1 text-[#004E89]/40 transition-colors hover:text-red-500"
                         aria-label="Remove task"
                       >
                         <svg
@@ -976,139 +612,176 @@ export default function CombinedPage() {
               )}
             </div>
 
-            {/* Input area with Add and Break Task buttons */}
-            <div className={`mt-4 border-t border-zinc-200 pt-4 flex items-start gap-3 rounded-2xl border ${colorPalette.border} bg-white/80 p-3`}>
-              <textarea
-                ref={textareaRef}
+              {/* Input area */}
+              <div className="flex-shrink-0 border-t border-[#004E89]/10 pt-4 flex items-center gap-2">
+                <input
+                  ref={inputRef}
+                  type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
+                    if (e.key === "Enter") {
                     e.preventDefault();
                     addTask(input);
-                  } else if (e.key === "Enter" && e.shiftKey) {
-                    e.preventDefault();
-                    handleBreakTasks(input);
                   }
                 }}
-                rows={2}
-                placeholder="Type a task... (Enter = add, Shift+Enter = break)"
-                className={`flex-1 resize-none rounded-2xl border ${colorPalette.border} bg-white/80 p-3 text-sm ${colorPalette.text} ${colorPalette.borderLight.replace('border-', 'focus:border-')} focus:outline-none`}
+                  placeholder="Add task..."
+                  className="flex-1 rounded-lg border border-[#004E89]/20 bg-white px-3 py-2 text-sm text-[#004E89] placeholder:text-[#004E89]/40 focus:border-[#FF6B35] focus:outline-none"
               />
-
-              <div className="flex flex-col gap-3 px-1">
                 <button
                   onClick={() => addTask(input)}
-                  className={`rounded-2xl ${colorPalette.accent} px-4 py-2 text-sm font-semibold text-white shadow-sm transition ${colorPalette.accentHover} focus:outline-none`}
+                  className={`rounded-lg ${colorPalette.accent} px-3 py-2 text-sm font-medium text-white transition ${colorPalette.accentHover}`}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-5">
-                    <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
-                  </svg>
+                  Add
                 </button>
-
                 <button
                   onClick={() => handleBreakTasks(input)}
                   disabled={isBreaking}
-                  className={`rounded-2xl border ${colorPalette.borderLight} px-4 py-2 text-sm font-semibold ${colorPalette.text} transition ${colorPalette.accentLight.replace('bg-', 'hover:bg-')} disabled:opacity-50 disabled:cursor-not-allowed`}
-                  title={isBreaking ? "Breaking down task..." : "Break down task using AI"}
+                  className="rounded-lg border border-[#004E89]/20 bg-white px-3 py-2 text-sm font-medium text-[#004E89] transition-colors hover:bg-[#F7C59F]/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Break down task using AI"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-5">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-4">
                     <path d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684ZM13.949 13.684a1 1 0 0 0-1.898 0l-.184.551a1 1 0 0 1-.632.633l-.551.183a1 1 0 0 0 0 1.898l.551.183a1 1 0 0 1 .633.633l.183.551a1 1 0 0 0 1.898 0l.184-.551a1 1 0 0 1 .632-.633l.551-.183a1 1 0 0 0 0-1.898l-.551-.184a1 1 0 0 1-.633-.632l-.183-.551Z" />
                   </svg>
                 </button>
               </div>
             </div>
+
+            {/* Right Column - Kanban Board (70%) */}
+            <div className="flex-1 flex gap-4 min-h-0">
+          {/* TO DO Column */}
+          <div className="flex-1 rounded-2xl border border-[#004E89]/20 bg-white/90 p-4 shadow-lg flex flex-col min-h-0">
+            <h3 className="text-lg font-semibold text-[#004E89] mb-4 flex-shrink-0">TO DO</h3>
+            <div className="flex-1 overflow-y-auto space-y-3 min-h-0">
+              {todoLists.length === 0 ? (
+                <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-[#004E89]/20 bg-[#F7C59F]/10 p-4 text-center">
+                  <p className="text-xs text-[#004E89]/60">No tasks in TO DO</p>
           </div>
-
-          {/* Right Column - Task List Progress */}
-          <div className="flex-1 rounded-2xl border border-black/5 bg-white/90 p-6 shadow-lg shadow-black/5 flex flex-col overflow-y-auto">
-            <div className="mb-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-zinc-900">Task List Progress</h2>
-                <Link
-                  href="/tasks?mode=combined"
-                  className={`rounded-lg p-1.5 ${colorPalette.text} transition-colors ${colorPalette.accentLight.replace('bg-', 'hover:bg-')}`}
-                  title="Go to Task Manager"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                    className="h-4 w-4"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M3 4.25A2.25 2.25 0 0 1 5.25 2h5.5A2.25 2.25 0 0 1 13 4.25v2a.75.75 0 0 1-1.5 0v-2a.75.75 0 0 0-.75-.75h-5.5a.75.75 0 0 0-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 0 0 .75-.75v-2a.75.75 0 0 1 1.5 0v2A2.25 2.25 0 0 1 10.75 18h-5.5A2.25 2.25 0 0 1 3 15.75V4.25Z"
-                      clipRule="evenodd"
-                    />
-                    <path
-                      fillRule="evenodd"
-                      d="M19 10a.75.75 0 0 0-.75-.75H8.704l1.048-.943a.75.75 0 1 0-1.004-1.114l-2.5 2.25a.75.75 0 0 0 0 1.114l2.5 2.25a.75.75 0 1 0 1.004-1.114l-1.048-.943h9.546A.75.75 0 0 0 19 10Z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </Link>
-              </div>
-              <p className="mt-1 text-xs text-zinc-600">
-                Completion rate by list
-              </p>
-            </div>
-
-            <div className="space-y-4 flex-1">
-              {listProgress.length === 0 ? (
-                <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-zinc-200 bg-zinc-50 p-8 text-center">
-                  <p className="text-sm text-zinc-500">
-                    No task lists yet. Create one in Task Manager!
-                  </p>
-                </div>
               ) : (
-                listProgress.map((list, index) => (
-                  <div key={index} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-zinc-900 truncate">{list.name}</p>
-                      <span className="text-xs text-zinc-600 ml-2">
-                        {list.completed}/{list.total}
-                      </span>
+                todoLists.map((list) => {
+                  const completedCount = list.tasks.filter((t) => t.done).length;
+                  const totalCount = list.tasks.length;
+                  const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+
+                  return (
+                    <div
+                      key={list.id}
+                      className="rounded-xl border border-[#004E89]/20 bg-white p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => {
+                        // Toggle first incomplete task when clicking the card
+                        const incompleteTask = list.tasks.find(t => !t.done);
+                        if (incompleteTask) {
+                          handleTaskToggle(list.id, incompleteTask.id);
+                        }
+                      }}
+                    >
+                      <h4 className="text-sm font-semibold text-[#004E89] mb-3 truncate">{list.name}</h4>
+                      <div>
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-[#F7C59F]/30">
+                          <div
+                            className="h-full rounded-full bg-[#FF6B35] transition-all duration-500"
+                            style={{ width: `${progress}%` }}
+                          />
+              </div>
+                        <p className="text-xs text-[#004E89]/60 mt-1">{completedCount}/{totalCount} tasks</p>
+                </div>
                     </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-200">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-orange-400 to-rose-500 transition-all duration-500"
-                        style={{ width: `${list.rate}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-zinc-500">{Math.round(list.rate)}% complete</p>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
+            </div>
 
-            {/* Today's Progress Summary */}
-            <div className={`mt-6 rounded-xl border ${colorPalette.borderLight} ${colorPalette.accentLight}/50 p-4`}>
-              <p className={`text-xs font-semibold ${colorPalette.textDark} mb-2`}>Today&apos;s Progress</p>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs text-zinc-600">
-                  <span>Today&apos;s Tasks</span>
-                  <span>{completedToday}/{totalToday}</span>
+          {/* Doing Column */}
+          <div className="flex-1 rounded-2xl border border-[#004E89]/20 bg-white/90 p-4 shadow-lg flex flex-col min-h-0">
+            <h3 className="text-lg font-semibold text-[#004E89] mb-4 flex-shrink-0">Doing</h3>
+            <div className="flex-1 overflow-y-auto space-y-3 min-h-0">
+              {doingLists.length === 0 ? (
+                <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-[#004E89]/20 bg-[#F7C59F]/10 p-4 text-center">
+                  <p className="text-xs text-[#004E89]/60">No tasks in progress</p>
                 </div>
-                <div className={`h-2 w-full overflow-hidden rounded-full ${colorPalette.borderLight.replace('border-', 'bg-')}`}>
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-violet-500 to-rose-500 transition-all duration-500"
-                    style={{ width: `${totalToday > 0 ? (completedToday / totalToday) * 100 : 0}%` }}
-                  />
-                </div>
+              ) : (
+                doingLists.map((list) => {
+                  const completedCount = list.tasks.filter((t) => t.done).length;
+                  const totalCount = list.tasks.length;
+                  const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+
+                  return (
+                    <div
+                      key={list.id}
+                      className="rounded-xl border border-[#004E89]/20 bg-white p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => {
+                        // Toggle first incomplete task when clicking the card
+                        const incompleteTask = list.tasks.find(t => !t.done);
+                        if (incompleteTask) {
+                          handleTaskToggle(list.id, incompleteTask.id);
+                        }
+                      }}
+                    >
+                      <h4 className="text-sm font-semibold text-[#004E89] mb-3 truncate">{list.name}</h4>
+                      <div>
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-[#F7C59F]/30">
+                          <div
+                            className="h-full rounded-full bg-[#FF6B35] transition-all duration-500"
+                            style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                        <p className="text-xs text-[#004E89]/60 mt-1">{completedCount}/{totalCount} tasks</p>
+                  </div>
+          </div>
+                  );
+                })
+              )}
               </div>
             </div>
-          </div>
-        </main>
-      )}
 
-      <FocusModeModal isOpen={isFocusModalOpen} onClose={() => setIsFocusModalOpen(false)} mode={mode} />
+          {/* Done Column */}
+          <div className="flex-1 rounded-2xl border border-[#004E89]/20 bg-white/90 p-4 shadow-lg flex flex-col min-h-0">
+            <h3 className="text-lg font-semibold text-[#004E89] mb-4 flex-shrink-0">Done</h3>
+            <div className="flex-1 overflow-y-auto space-y-3 min-h-0">
+              {doneLists.length === 0 ? (
+                <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-[#004E89]/20 bg-[#F7C59F]/10 p-4 text-center">
+                  <p className="text-xs text-[#004E89]/60">No completed tasks</p>
+                </div>
+              ) : (
+                doneLists.map((list) => {
+                  const completedCount = list.tasks.filter((t) => t.done).length;
+                  const totalCount = list.tasks.length;
+                  const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+
+                  return (
+                    <div
+                      key={list.id}
+                      className="rounded-xl border border-[#004E89]/20 bg-white p-4 shadow-sm opacity-75"
+                    >
+                      <h4 className="text-sm font-semibold text-[#004E89] mb-3 truncate">{list.name}</h4>
+                      <div>
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-[#F7C59F]/30">
+                          <div
+                            className="h-full rounded-full bg-[#FF6B35] transition-all duration-500"
+                            style={{ width: `${progress}%` }}
+                  />
+                </div>
+                        <p className="text-xs text-[#004E89]/60 mt-1">{completedCount}/{totalCount} tasks</p>
+              </div>
+            </div>
+                  );
+                })
+              )}
+          </div>
+            </div>
+          </div>
+          </>
+      )}
+      </main>
+
+      <FocusModeModal isOpen={isFocusModalOpen} onClose={() => setIsFocusModalOpen(false)} mode="combined" />
       <AddTasksModal
         isOpen={isAddTasksModalOpen}
         onClose={() => setIsAddTasksModalOpen(false)}
         onAddTasks={handleAddTasks}
         existingTaskIds={existingTaskIds}
-        mode={mode}
+        mode="hyperactive"
         key={isAddTasksModalOpen ? "open" : "closed"}
       />
       <BreakTasksModal
