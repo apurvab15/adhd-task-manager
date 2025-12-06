@@ -619,7 +619,7 @@ export default function HyperactivePage() {
         <div className="flex-[2] rounded-2xl border border-black/5 bg-white/90 p-6 shadow-lg shadow-black/5 flex flex-col">
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xl font-semibold text-zinc-900">Today&apos;s Tasks</h2>
+              <h2 className="text-3xl font-semibold text-zinc-900">Today&apos;s Tasks</h2>
               <button
                 onClick={() => setIsAddTasksModalOpen(true)}
                 className={`rounded-lg p-1.5 ${colorPalette.text} transition-colors ${colorPalette.accentLight.replace('bg-', 'hover:bg-')}`}
@@ -636,9 +636,6 @@ export default function HyperactivePage() {
                 </svg>
               </button>
             </div>
-            <p className="text-xs text-zinc-600">
-              {completedToday} of {totalToday} completed
-            </p>
           </div>
 
           <div className="flex-1 overflow-y-auto">

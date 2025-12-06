@@ -708,11 +708,8 @@ export default function CombinedPage() {
           <div className="flex-1 rounded-3xl border-2 border-[#7085FF]/20 bg-white p-12 flex flex-col">
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-4xl font-bold text-gray-900">Today&apos;s List</h2>
+                <h2 className="text-5xl font-bold text-gray-900">Today&apos;s List</h2>
               </div>
-              <p className="text-2xl text-gray-700">
-                {completedToday} of {totalToday} completed
-              </p>
             </div>
 
             <div className="flex-1 overflow-y-auto">
@@ -904,7 +901,7 @@ export default function CombinedPage() {
           <div className="flex-[2] rounded-2xl border border-black/5 bg-white/90 p-6 shadow-lg shadow-black/5 flex flex-col">
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
-                <h2 className="text-xl font-semibold text-zinc-900">Today&apos;s Tasks</h2>
+                <h2 className="text-3xl font-semibold text-zinc-900">Today&apos;s Tasks</h2>
                 <button
                   onClick={() => setIsAddTasksModalOpen(true)}
                   className={`rounded-lg p-1.5 ${colorPalette.text} transition-colors ${colorPalette.accentLight.replace('bg-', 'hover:bg-')}`}
@@ -921,9 +918,6 @@ export default function CombinedPage() {
                   </svg>
                 </button>
               </div>
-              <p className="text-xs text-zinc-600">
-                {completedToday} of {totalToday} completed
-              </p>
             </div>
 
             <div className="flex-1 overflow-y-auto">
