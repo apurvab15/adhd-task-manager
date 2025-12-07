@@ -108,11 +108,11 @@ export default function InattentivePage() {
     setIsHydrated(true);
   }, []);
 
-  // Listen for task completion events to refresh task lists
+  // Listen for task completion events to refresh task lists and today's tasks
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const handleTaskUpdate = () => {
+    const handleTaskListUpdate = () => {
       try {
         const savedLists = window.localStorage.getItem(STORAGE_KEY);
         if (savedLists) {
@@ -124,12 +124,32 @@ export default function InattentivePage() {
       }
     };
 
-    window.addEventListener("taskCompleted", handleTaskUpdate);
-    window.addEventListener("storage", handleTaskUpdate);
+    const handleTodayTasksUpdate = () => {
+      try {
+        const saved = window.localStorage.getItem(TODAY_TASKS_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          const today = new Date().toDateString();
+          if (parsed.date === today) {
+            const tasks = parsed.tasks || [];
+            setTodayTasks(tasks);
+          }
+        }
+      } catch (error) {
+        console.error("Error refreshing today's tasks:", error);
+      }
+    };
+
+    window.addEventListener("taskCompleted", handleTaskListUpdate);
+    window.addEventListener("taskListUpdated", handleTaskListUpdate);
+    window.addEventListener("todayTasksUpdated", handleTodayTasksUpdate);
+    window.addEventListener("storage", handleTaskListUpdate);
 
     return () => {
-      window.removeEventListener("taskCompleted", handleTaskUpdate);
-      window.removeEventListener("storage", handleTaskUpdate);
+      window.removeEventListener("taskCompleted", handleTaskListUpdate);
+      window.removeEventListener("taskListUpdated", handleTaskListUpdate);
+      window.removeEventListener("todayTasksUpdated", handleTodayTasksUpdate);
+      window.removeEventListener("storage", handleTaskListUpdate);
     };
   }, []);
 

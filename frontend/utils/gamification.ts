@@ -3,7 +3,8 @@ const XP_PER_TASK = 5; // XP for ticking items in hyperactive mode
 const XP_FOR_BREAKING_TASK = 10;
 const XP_FOR_FOCUS_MODE = 10;
 const XP_FOR_TASK_LIST_COMPLETION = 10;
-const XP_PER_LEVEL = 100; // XP needed per level
+const XP_FOR_LEVEL_1 = 50; // XP needed for level 1
+const XP_PER_LEVEL = 100; // XP needed per level from level 2 onwards
 
 export type UserStats = {
   totalXP: number;
@@ -15,11 +16,22 @@ export type UserStats = {
 };
 
 export function calculateLevel(xp: number): { level: number; currentLevelXP: number; xpToNextLevel: number } {
-  const level = Math.floor(xp / XP_PER_LEVEL) + 1;
-  const currentLevelXP = xp % XP_PER_LEVEL;
-  const xpToNextLevel = XP_PER_LEVEL - currentLevelXP;
-  
-  return { level, currentLevelXP, xpToNextLevel };
+  if (xp < XP_FOR_LEVEL_1) {
+    // Level 1: requires 50 XP
+    return {
+      level: 1,
+      currentLevelXP: xp,
+      xpToNextLevel: XP_FOR_LEVEL_1 - xp,
+    };
+  } else {
+    // Level 2 onwards: requires 100 XP per level
+    const xpAfterLevel1 = xp - XP_FOR_LEVEL_1;
+    const level = 2 + Math.floor(xpAfterLevel1 / XP_PER_LEVEL);
+    const currentLevelXP = xpAfterLevel1 % XP_PER_LEVEL;
+    const xpToNextLevel = XP_PER_LEVEL - currentLevelXP;
+    
+    return { level, currentLevelXP, xpToNextLevel };
+  }
 }
 
 export function getStats(): UserStats {
@@ -28,7 +40,7 @@ export function getStats(): UserStats {
       totalXP: 0,
       level: 1,
       currentLevelXP: 0,
-      xpToNextLevel: XP_PER_LEVEL,
+      xpToNextLevel: XP_FOR_LEVEL_1,
       tasksCompleted: 0,
       tasksCompletedToday: 0,
     };
@@ -62,7 +74,7 @@ export function getStats(): UserStats {
     totalXP: 0,
     level: 1,
     currentLevelXP: 0,
-    xpToNextLevel: XP_PER_LEVEL,
+    xpToNextLevel: XP_FOR_LEVEL_1,
     tasksCompleted: 0,
     tasksCompletedToday: 0,
   };
@@ -159,8 +171,9 @@ export function penalizeXPForUncompletedTask(): UserStats {
 }
 
 export function getProgressPercentage(stats: UserStats): number {
-  if (stats.xpToNextLevel === XP_PER_LEVEL) return 0;
-  return ((XP_PER_LEVEL - stats.xpToNextLevel) / XP_PER_LEVEL) * 100;
+  const xpNeededForCurrentLevel = stats.level === 1 ? XP_FOR_LEVEL_1 : XP_PER_LEVEL;
+  if (stats.xpToNextLevel === xpNeededForCurrentLevel) return 0;
+  return ((xpNeededForCurrentLevel - stats.xpToNextLevel) / xpNeededForCurrentLevel) * 100;
 }
 
 /**

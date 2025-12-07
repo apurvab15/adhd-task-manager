@@ -131,6 +131,46 @@ export function TasksPageData() {
     window.dispatchEvent(new CustomEvent("taskListUpdated"));
   }, [taskLists, isHydrated, mode]);
 
+  // Listen for task list updates from focus mode or other pages
+  useEffect(() => {
+    if (typeof window === "undefined" || !isHydrated) return;
+
+    const handleTaskListUpdate = () => {
+      try {
+        const storageKey = getStorageKey();
+        const saved = window.localStorage.getItem(storageKey);
+        if (saved) {
+          const parsed = JSON.parse(saved) as TaskList[];
+          if (parsed.length > 0) {
+            setTaskLists(parsed);
+            // Update currentListId if needed
+            if (!currentListId || !parsed.some((list) => list.id === currentListId)) {
+              setCurrentListId(parsed[0].id);
+            }
+            // Update next IDs
+            const maxListId = Math.max(...parsed.map((list) => list.id));
+            nextListId.current = maxListId + 1;
+            const allTasks = parsed.flatMap((list) => list.tasks);
+            if (allTasks.length > 0) {
+              const maxTaskId = Math.max(...allTasks.map((task) => task.id));
+              nextTaskId.current = maxTaskId + 1;
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error refreshing task lists:", error);
+      }
+    };
+
+    window.addEventListener("taskListUpdated", handleTaskListUpdate);
+    window.addEventListener("storage", handleTaskListUpdate);
+
+    return () => {
+      window.removeEventListener("taskListUpdated", handleTaskListUpdate);
+      window.removeEventListener("storage", handleTaskListUpdate);
+    };
+  }, [isHydrated, mode, currentListId]);
+
   // Ensure currentListId is valid
   useEffect(() => {
     if (taskLists.length > 0 && (!currentListId || !taskLists.some((list) => list.id === currentListId))) {
@@ -483,6 +523,10 @@ export function TasksPageData() {
                         className={`h-full rounded-full transition-all duration-500 ${
                           mode === "combined"
                             ? "bg-[#FF6B35]"
+                            : mode === "hyperactive"
+                            ? isSelected
+                              ? "bg-gradient-to-r from-[#004E89] to-[#1A659E]"
+                              : "bg-gray-400"
                             : isSelected 
                             ? colorPalette.accent 
                             : "bg-gray-400"

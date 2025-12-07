@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import SimpleTaskList from "@/components/SimpleTaskList";
 import { violetPalette, periwinklePalette, combinedPalette, inattentivePalette, hyperactivePalette, type ColorPalette } from "@/components/TaskListDrawer";
+import { awardXPForTask, revokeXPForTaskCompletion } from "@/utils/gamification";
 import JSConfetti from "js-confetti";
 
 type Mode = "inattentive" | "hyperactive" | "combined";
@@ -164,7 +165,7 @@ export function FocusModePageData() {
     }
   }, []);
 
-  // Track completed tasks
+  // Track completed tasks and sync with task manager and today's tasks
   const handleTaskToggle = (taskId: string | number, isChecked: boolean) => {
     const id = typeof taskId === 'string' ? parseInt(taskId, 10) : taskId;
     if (isNaN(id)) return;
@@ -178,6 +179,82 @@ export function FocusModePageData() {
       }
       return newSet;
     });
+
+    // Sync with task manager
+    if (typeof window !== "undefined") {
+      try {
+        const storageKey = 
+          mode === "inattentive" ? "adhd-task-lists-inattentive" :
+          mode === "combined" ? "adhd-task-lists-combined" :
+          "adhd-task-lists-hyperactive";
+        
+        const savedLists = window.localStorage.getItem(storageKey);
+        if (savedLists) {
+          const taskLists: Array<{ id: number; name: string; tasks: Array<{ id: number; text: string; done: boolean }> }> = JSON.parse(savedLists);
+          
+          // Update task in task manager
+          const updatedLists = taskLists.map((list) => ({
+            ...list,
+            tasks: list.tasks.map((t) =>
+              t.id === id ? { ...t, done: isChecked } : t
+            ),
+          }));
+          
+          window.localStorage.setItem(storageKey, JSON.stringify(updatedLists));
+          window.dispatchEvent(new CustomEvent("taskListUpdated"));
+        }
+      } catch (error) {
+        console.error("Error syncing with task manager:", error);
+      }
+
+      // Sync with today's tasks
+      try {
+        const todayTasksKey = 
+          mode === "inattentive" ? "adhd-today-tasks-inattentive" :
+          mode === "combined" ? "adhd-today-tasks-combined" :
+          "adhd-today-tasks-hyperactive";
+        
+        const savedTodayTasks = window.localStorage.getItem(todayTasksKey);
+        let previousDoneState = false;
+        
+        if (savedTodayTasks) {
+          const parsed = JSON.parse(savedTodayTasks);
+          const today = new Date().toDateString();
+          
+          if (parsed.date === today) {
+            const todayTasks = parsed.tasks || [];
+            const task = todayTasks.find((t: { id: number }) => t.id === id);
+            previousDoneState = task ? task.done : false;
+            
+            const updatedTodayTasks = todayTasks.map((t: { id: number; text: string; done: boolean }) =>
+              t.id === id ? { ...t, done: isChecked } : t
+            );
+            
+            window.localStorage.setItem(
+              todayTasksKey,
+              JSON.stringify({ date: today, tasks: updatedTodayTasks })
+            );
+            window.dispatchEvent(new CustomEvent("todayTasksUpdated"));
+          }
+        }
+
+        // Award/revoke XP for hyperactive mode only
+        if (mode === "hyperactive") {
+          if (isChecked && !previousDoneState) {
+            // Marking as done – award 5 XP
+            awardXPForTask();
+          } else if (!isChecked && previousDoneState) {
+            // Unchecking a completed task – revoke 5 XP
+            revokeXPForTaskCompletion();
+          }
+        }
+      } catch (error) {
+        console.error("Error syncing with today's tasks:", error);
+      }
+
+      // Dispatch task completion event for gamification and other listeners
+      window.dispatchEvent(new CustomEvent("taskCompleted"));
+    }
   };
 
   // Check if all tasks are completed
@@ -280,7 +357,7 @@ export function FocusModePageData() {
       </nav>
 
       {/* Main Content - 2 Column Layout */}
-      <main className="flex-1 flex gap-4 p-4 overflow-hidden min-h-0">
+      <main className="flex-1 flex gap-4 p-4 pt-6 overflow-hidden min-h-0">
         {/* Left Column - Timer (with card, vertically centered) */}
         <div className="w-1/2 flex flex-col">
           <div className={`flex-1 rounded-2xl border ${colorPalette.borderLight} bg-white/90 p-6 shadow-lg flex items-center justify-center`}>

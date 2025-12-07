@@ -351,25 +351,31 @@ export default function HyperactivePage() {
     el.focus();
   };
 
-  const handleBreakTasks = async (text: string) => {
+  const handleBreakTasks = async (text: string, showModal: boolean = true) => {
     const taskText = text.trim();
     if (!taskText) return;
     
     setOriginalTaskText(taskText);
-    setIsBreakTasksModalOpen(true);
+    if (showModal) {
+      setIsBreakTasksModalOpen(true);
+    }
     
     try {
       const subTasks = await breakTask(taskText, "hyperactive");
       console.log("hyperactive page: subTasks", subTasks);
       if (subTasks && subTasks.length === 0) {
-        setIsBreakTasksModalOpen(false);
+        if (showModal) {
+          setIsBreakTasksModalOpen(false);
+        }
         alert("No sub-tasks were generated. Please try again.");
         return;
       }
       setBrokenTasks(subTasks || []);
     } catch (error) {
       console.error("Error breaking down task:", error);
-      setIsBreakTasksModalOpen(false);
+      if (showModal) {
+        setIsBreakTasksModalOpen(false);
+      }
       alert(error instanceof Error ? error.message : "Failed to break down task. Please try again.");
     }
   };
@@ -518,7 +524,7 @@ export default function HyperactivePage() {
               <>
                 <div className="flex-1 h-2 overflow-hidden rounded-full bg-[#7FA0BB]/40">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-[#FF6B35] to-[#E03C00] transition-all duration-500"
+                    className="h-full rounded-full bg-gradient-to-r from-[#004E89] to-[#1A659E] transition-all duration-500"
                     style={{ width: `${(completedToday / totalToday) * 100}%` }}
                   />
                 </div>
@@ -580,7 +586,7 @@ export default function HyperactivePage() {
                 LEVEL {stats.level}
               </p>
               <p className="text-sm text-[#1A659E]">
-                {stats.currentLevelXP} / 100 XP
+                {stats.currentLevelXP} / {stats.level === 1 ? 50 : 100} XP
               </p>
             </div>
 
@@ -596,23 +602,7 @@ export default function HyperactivePage() {
                 </svg>
                 Go to Focus Mode
               </button>
-              <button
-                onClick={() => {
-                  if (input.trim()) {
-                    handleBreakTasks(input);
-                  } else {
-                    // If no input, just open the break modal with empty input
-                    setIsBreakTasksModalOpen(true);
-                  }
-                }}
-                className={`w-full rounded-xl border ${colorPalette.borderLight} bg-white px-4 py-3 text-sm font-semibold ${colorPalette.text} transition ${colorPalette.accentLight.replace('bg-', 'hover:bg-')} flex items-center justify-center gap-2`}
-                title="Break a Task (+10 XP)"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-                  <path d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684ZM13.949 13.684a1 1 0 0 0-1.898 0l-.184.551a1 1 0 0 1-.632.633l-.551.183a1 1 0 0 0 0 1.898l.551.183a1 1 0 0 1 .633.633l.183.551a1 1 0 0 0 1.898 0l.184-.551a1 1 0 0 1 .632-.633l.551-.183a1 1 0 0 0 0-1.898l-.551-.184a1 1 0 0 1-.633-.632l-.183-.551Z" />
-                </svg>
-                Break a Task
-              </button>
+            
             </div>
           </div>
         </div>
@@ -699,11 +689,21 @@ export default function HyperactivePage() {
               <button
                 onClick={() => addTask(input)}
                 className={`rounded-lg ${colorPalette.accent} px-4 py-2 text-base font-medium text-white transition ${colorPalette.accentHover}`}
+                title="Add task (+5 XP when completed)"
               >
                 Add
               </button>
               <button
-                onClick={() => handleBreakTasks(input)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (input.trim()) {
+                    handleBreakTasks(input, true); // Show modal for center column button
+                  } else {
+                    // If no input, just open the break modal with empty input
+                    setIsBreakTasksModalOpen(true);
+                  }
+                }}
                 disabled={isBreaking}
                 className="rounded-lg border border-[#7FA0BB]/40 bg-white px-4 py-2 text-base font-medium text-[#004E89] transition-colors hover:bg-[#FFAF91]/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 title="Break down task using AI"
@@ -739,7 +739,7 @@ export default function HyperactivePage() {
                   <div>
                     <div className="h-2 w-full overflow-hidden rounded-full bg-[#7FA0BB]/40">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-[#FF6B35] to-[#E03C00] transition-all duration-500"
+                        className="h-full rounded-full bg-gradient-to-r from-[#004E89] to-[#1A659E] transition-all duration-500"
                         style={{ width: `${list.rate}%` }}
                       />
                     </div>

@@ -7,7 +7,7 @@ const defaultStats: UserStats = {
   totalXP: 0,
   level: 1,
   currentLevelXP: 0,
-  xpToNextLevel: 100,
+  xpToNextLevel: 50, // Level 1 requires 50 XP
   tasksCompleted: 0,
   tasksCompletedToday: 0,
 };

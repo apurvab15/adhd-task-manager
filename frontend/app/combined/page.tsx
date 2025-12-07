@@ -145,7 +145,7 @@ export default function CombinedPage() {
     window.dispatchEvent(new CustomEvent("taskListUpdated"));
   }, [taskLists, isHydrated]);
 
-  // Listen for changes from task manager
+  // Listen for changes from task manager and today's tasks
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -173,11 +173,29 @@ export default function CombinedPage() {
       }
     };
 
+    const handleTodayTasksUpdate = () => {
+      try {
+        const saved = window.localStorage.getItem(TODAY_TASKS_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          const today = new Date().toDateString();
+          if (parsed.date === today) {
+            const tasks = parsed.tasks || [];
+            setTodayTasks(tasks);
+          }
+        }
+      } catch (error) {
+        console.error("Error refreshing today's tasks:", error);
+      }
+    };
+
       window.addEventListener("taskListUpdated", handleTaskListUpdate);
+      window.addEventListener("todayTasksUpdated", handleTodayTasksUpdate);
     window.addEventListener("storage", handleTaskListUpdate);
 
     return () => {
         window.removeEventListener("taskListUpdated", handleTaskListUpdate);
+        window.removeEventListener("todayTasksUpdated", handleTodayTasksUpdate);
       window.removeEventListener("storage", handleTaskListUpdate);
     };
   }, []);
