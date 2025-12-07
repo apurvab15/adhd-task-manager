@@ -152,9 +152,9 @@ export async function POST(req: NextRequest) {
 
     // Initialize Google Gemini
     const genAI = new GoogleGenerativeAI(googleAPIKey);
-    // Use gemini-pro (stable) or gemini-1.5-flash (faster). 
+    // Use gemini-pro (stablaunlallale) or gemini-1.5-flash (faster). 
     // gemini-1.5-pro requires v1 API, not v1beta
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     // Build prompt (same structure as Python notebook)
     const prompt = `You are an expert in ADHD screening and UX personalization.
