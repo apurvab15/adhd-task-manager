@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import TaskListDrawer, { type ColorPalette, violetPalette } from "./TaskListDrawer";
+import TaskListDrawer, { type ColorPalette, violetPalette, hyperactivePalette, inattentivePalette, combinedPalette } from "./TaskListDrawer";
 import { awardXPForTask, revokeXPForTaskCompletion, penalizeXPForUncompletedTask, awardXPForTaskListCompletion } from "@/utils/gamification";
 import { useTaskBreaker } from "@/hooks/useTaseBreaking";
 import BreakTasksModal from "./BreakTasksModal";
@@ -22,7 +22,7 @@ type Mode = "inattentive" | "hyperactive" | "combined";
 
 type TaskListWindowProps = {
     mode?: Mode;
-    colorPalette?: ColorPalette;
+    effectivePalette?: ColorPalette;
 };
 
 const getStorageKey = (mode: Mode) => {
@@ -37,7 +37,13 @@ const getTodayTasksKey = (mode: Mode) => {
     return "adhd-today-tasks-combined";
 };
 
-export default function TaskListWindow({ mode = "hyperactive", colorPalette = violetPalette }: TaskListWindowProps) {
+export default function TaskListWindow({ mode = "hyperactive", colorPalette }: TaskListWindowProps) {
+    // Use appropriate palette based on mode if not provided
+    const effectivePalette = colorPalette || (
+        mode === "inattentive" ? inattentivePalette :
+        mode === "combined" ? combinedPalette :
+        hyperactivePalette
+    );
     // Always start with default state to avoid hydration mismatch
     const [taskLists, setTaskLists] = useState<TaskList[]>([{ id: 1, name: "Task List", tasks: [] }]);
     const [currentListId, setCurrentListId] = useState<number>(1);
@@ -411,9 +417,9 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
                 onDeleteList={deleteList}
                 isOpen={isDrawerOpen}
                 onToggle={() => setIsDrawerOpen(!isDrawerOpen)}
-                colorPalette={colorPalette}
+                colorPalette={effectivePalette}
             />
-            <div className={`flex-1 rounded-3xl border ${colorPalette.border} bg-gradient-to-b ${colorPalette.bg} p-6 shadow-lg ${colorPalette.shadow} flex flex-col`}>
+            <div className={`flex-1 rounded-3xl border ${effectivePalette.border} bg-gradient-to-b ${effectivePalette.bg} p-6 shadow-lg ${effectivePalette.shadow} flex flex-col`}>
             {/* Editable title with pencil icon */}
             <div className="flex items-center mb-2">
                 {isEditingTitle ? (
@@ -432,15 +438,15 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
                                     cancelEditingTitle();
                                 }
                             }}
-                            className={`flex-1 text-lg font-semibold ${colorPalette.textDark} bg-transparent border-b-2 ${colorPalette.accent.replace('bg-', 'border-')} focus:outline-none px-1`}
+                            className={`flex-1 text-lg font-semibold ${effectivePalette.textDark} bg-transparent border-b-2 ${effectivePalette.accent.replace('bg-', 'border-')} focus:outline-none px-1`}
                         />
                     </div>
                 ) : (
-                    <div className={`flex items-center gap-1.5 ${colorPalette.textDark}`}>
-                        <h3 className={`text-lg font-semibold ${colorPalette.textDark}`}>{currentList.name}</h3>
+                    <div className={`flex items-center gap-1.5 ${effectivePalette.textDark}`}>
+                        <h3 className={`text-lg font-semibold ${effectivePalette.textDark}`}>{currentList.name}</h3>
                         <button
                             onClick={startEditingTitle}
-                            className={`p-0.5 rounded ${colorPalette.text} ${colorPalette.accentLight.replace('bg-', 'hover:bg-')} transition-colors`}
+                            className={`p-0.5 rounded ${effectivePalette.text} ${effectivePalette.accentLight.replace('bg-', 'hover:bg-')} transition-colors`}
                             title="Edit title"
                         >
                             <svg
@@ -457,12 +463,12 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
             </div>
 
             {/* Scrollable task list */}
-            <div className={`flex-1 min-h-[200px] max-h-[500px] overflow-auto rounded-2xl border ${colorPalette.border} bg-white/70 p-3 mb-4`}>
+            <div className={`flex-1 min-h-[200px] max-h-[500px] overflow-auto rounded-2xl border ${effectivePalette.border} bg-white/70 p-3 mb-4`}>
                 <ul>
                     {currentList.tasks.map((task) => (
                         <li
                             key={task.id}
-                            className={`flex items-center justify-between rounded-2xl border ${colorPalette.border} bg-white/90 px-4 py-3 transition ${colorPalette.borderLight.replace('border-', 'hover:border-')}`}
+                            className={`flex items-center justify-between rounded-2xl border ${effectivePalette.border} bg-white/90 px-4 py-3 transition ${effectivePalette.borderLight.replace('border-', 'hover:border-')}`}
                         >
                             <div className="flex items-center gap-3">
                                 {/* custom radio-like button */}
@@ -470,8 +476,8 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
                                     onClick={() => toggleDone(task.id)}
                                     aria-pressed={task.done}
                                     className={`w-4 h-4 rounded-full flex items-center justify-center border-2 transition-all focus:outline-none ${task.done
-                                        ? `${colorPalette.accent.replace('bg-', 'border-')} ${colorPalette.accent}`
-                                        : `${colorPalette.borderLight} bg-transparent`
+                                        ? `${effectivePalette.accent.replace('bg-', 'border-')} ${effectivePalette.accent}`
+                                        : `${effectivePalette.borderLight} bg-transparent`
                                         }`}
                                     title={task.done ? "Mark as not done" : "Mark as done"}
                                 >
@@ -481,7 +487,7 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
 
                                 {/* task text */}
                                 <span
-                                    className={`select-none ${task.done ? `line-through ${colorPalette.textMuted}` : colorPalette.text}`}
+                                    className={`select-none ${task.done ? `line-through ${effectivePalette.textMuted}` : effectivePalette.text}`}
                                     onClick={() => toggleDone(task.id)}
                                 >
                                     {task.text}
@@ -491,7 +497,7 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={() => removeTask(task.id)}
-                                    className={`text-xs px-2 py-1 rounded-xl ${colorPalette.text} ${colorPalette.accentLight.replace('bg-', 'hover:bg-')}`}
+                                    className={`text-xs px-2 py-1 rounded-xl ${effectivePalette.text} ${effectivePalette.accentLight.replace('bg-', 'hover:bg-')}`}
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-5">
                                         <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
@@ -504,13 +510,13 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
                     ))}
 
                     {currentList.tasks.length === 0 && (
-                        <li className={`text-sm ${colorPalette.textMuted}`}>No tasks yet — add one!</li>
+                        <li className={`text-sm ${effectivePalette.textMuted}`}>No tasks yet — add one!</li>
                     )}
                 </ul>
             </div>
 
             {/* input area with Add and Break Task on the right */}
-            <div className={`flex items-start gap-3 rounded-2xl border ${colorPalette.border} bg-white/80 p-3`}>
+            <div className={`flex items-start gap-3 rounded-2xl border ${effectivePalette.border} bg-white/80 p-3`}>
                 <textarea
                     ref={inputRef}
                     value={input}
@@ -526,13 +532,13 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
                     }}
                     rows={2}
                     placeholder="Type a task... (Enter = add, Shift+Enter = break)"
-                    className={`flex-1 resize-none rounded-2xl border ${colorPalette.border} bg-white/80 p-3 text-base ${colorPalette.text} ${colorPalette.borderLight.replace('border-', 'focus:border-')} focus:outline-none`}
+                    className={`flex-1 resize-none rounded-2xl border ${effectivePalette.border} bg-white/80 p-3 text-base ${effectivePalette.text} ${effectivePalette.borderLight.replace('border-', 'focus:border-')} focus:outline-none`}
                 />
 
                 <div className="flex flex-col gap-3">
                     <button
                         onClick={() => addTask(input)}
-                        className={`rounded-2xl ${colorPalette.accent} px-4 py-2 text-base font-semibold text-white shadow-sm transition ${colorPalette.accentHover} focus:outline-none`}
+                        className={`rounded-2xl ${effectivePalette.accent} px-4 py-2 text-base font-semibold text-white shadow-sm transition ${effectivePalette.accentHover} focus:outline-none`}
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-5">
                             <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
@@ -542,7 +548,7 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
                     <button
                         onClick={() => handleBreakTasks(input)}
                         disabled={isBreaking}
-                        className={`rounded-2xl border ${colorPalette.borderLight} px-4 py-2 text-base font-semibold ${colorPalette.text} transition ${colorPalette.accentLight.replace('bg-', 'hover:bg-')} disabled:opacity-50 disabled:cursor-not-allowed`}
+                        className={`rounded-2xl border ${effectivePalette.borderLight} px-4 py-2 text-base font-semibold ${effectivePalette.text} transition ${effectivePalette.accentLight.replace('bg-', 'hover:bg-')} disabled:opacity-50 disabled:cursor-not-allowed`}
                         title={isBreaking ? "Breaking down task..." : "Break down task using AI"}
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-5">
@@ -566,7 +572,7 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette = vi
             }}
             onDiscard={handleDiscardBrokenTasks}
             onAdd={handleAddBrokenTasks}
-            colorPalette={colorPalette}
+            colorPalette={effectivePalette}
         />
         </>
     );

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { violetPalette, skyPalette, periwinklePalette, combinedPalette, inattentivePalette, type ColorPalette } from "./TaskListDrawer";
+import { violetPalette, skyPalette, periwinklePalette, combinedPalette, inattentivePalette, hyperactivePalette, type ColorPalette } from "./TaskListDrawer";
 import { awardXPForFocusMode } from "@/utils/gamification";
 
 type Task = {
@@ -37,7 +37,7 @@ export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }
   const colorPalette: ColorPalette = 
     mode === "inattentive" ? inattentivePalette :
     mode === "combined" ? combinedPalette :
-    violetPalette;
+    hyperactivePalette;
   const [allTasks, setAllTasks] = useState<Array<{ task: Task; listName: string }>>([]);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<number>>(new Set());
   const [timerMinutes, setTimerMinutes] = useState(25);
@@ -117,9 +117,9 @@ export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
-      <div className={`w-full max-w-2xl max-h-[90vh] rounded-3xl border ${colorPalette.border} ${mode === "inattentive" ? "bg-white" : `bg-gradient-to-b ${colorPalette.bg}`} shadow-2xl ${colorPalette.shadow} flex flex-col my-auto`}>
+      <div className={`w-full max-w-2xl max-h-[90vh] rounded-3xl border ${colorPalette.border} bg-white shadow-2xl ${colorPalette.shadow} flex flex-col my-auto overflow-hidden`}>
         {/* Header */}
-        <div className="flex items-center justify-between p-6 pb-4 flex-shrink-0">
+        <div className="flex items-center justify-between p-6 pb-4 flex-shrink-0 bg-white">
           <h2 className={`text-2xl font-semibold ${colorPalette.textDark}`}>Focus Mode Setup</h2>
           <button
             onClick={onClose}
@@ -138,7 +138,7 @@ export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }
         </div>
 
         {/* Body - Scrollable */}
-        <div className="px-6 pb-4 space-y-4 overflow-y-auto flex-1 min-h-0">
+        <div className={`px-6 pb-4 space-y-4 overflow-y-auto flex-1 min-h-0 ${mode === "inattentive" ? "bg-white" : mode === "hyperactive" ? "bg-gradient-to-b from-[#FFD1BF]/40 via-[#FEF2EC]/60 to-[#FEF2EC]" : `bg-gradient-to-b ${colorPalette.bg}`}`}>
           {/* Timer Setting */}
           <div className={`rounded-2xl border ${colorPalette.borderLight} ${mode === "inattentive" ? "bg-white" : "bg-white/80"} p-4`}>
             <label className={`mb-2 block text-sm font-semibold ${colorPalette.textDark}`}>
@@ -174,7 +174,7 @@ export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }
                     setTimerMinutes(120);
                   }
                 }}
-                className={`flex-1 rounded-xl border ${colorPalette.borderLight} bg-white px-4 py-2 text-center ${colorPalette.textDark} ${mode === "inattentive" ? "focus:border-[#665FD1]" : "focus:border-violet-400"} focus:outline-none`}
+                className={`flex-1 rounded-xl border ${colorPalette.borderLight} bg-white px-4 py-2 text-center ${colorPalette.textDark} ${mode === "inattentive" ? "focus:border-[#665FD1]" : mode === "hyperactive" ? "focus:border-[#FF6B35]" : "focus:border-violet-400"} focus:outline-none`}
               />
               <button
                 type="button"
@@ -263,7 +263,7 @@ export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }
                         type="checkbox"
                         checked={selectedTaskIds.has(task.id)}
                         onChange={() => handleTaskToggle(task.id)}
-                        className={`mt-1 h-4 w-4 cursor-pointer rounded ${colorPalette.border} ${colorPalette.text} focus:ring-violet-500`}
+                        className={`mt-1 h-4 w-4 cursor-pointer rounded ${colorPalette.border} ${colorPalette.text} ${mode === "hyperactive" ? "focus:ring-[#FF6B35]" : "focus:ring-violet-500"}`}
                       />
                       <div className="flex-1">
                         <p className={`text-sm ${colorPalette.textDark}`}>{task.text}</p>
@@ -278,7 +278,7 @@ export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }
         </div>
 
         {/* Footer */}
-        <div className={`flex items-center justify-end border-t ${colorPalette.borderLight} p-6 pt-4 flex-shrink-0`}>
+        <div className={`flex items-center justify-end border-t ${colorPalette.borderLight} p-6 pt-4 flex-shrink-0 bg-white`}>
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}

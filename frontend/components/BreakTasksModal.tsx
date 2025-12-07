@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { periwinklePalette, type ColorPalette } from "./TaskListDrawer";
+import { periwinklePalette, hyperactivePalette, type ColorPalette } from "./TaskListDrawer";
 
 type BrokenTask = {
   id: number;
@@ -79,11 +79,11 @@ export default function BreakTasksModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div
-        className={`w-full max-w-3xl rounded-3xl border-2 ${colorPalette.border} bg-white shadow-2xl flex flex-col`}
+        className={`w-full max-w-3xl rounded-3xl border-2 ${colorPalette.border} bg-white shadow-2xl flex flex-col overflow-hidden`}
         style={{ height: "85vh" }}
       >
         {/* Header */}
-        <div className={`flex items-center justify-between p-6 pb-4 flex-shrink-0 border-b ${colorPalette.borderLight}`}>
+        <div className={`flex items-center justify-between p-6 pb-4 flex-shrink-0 border-b ${colorPalette.borderLight} bg-white`}>
           <div>
             <h2 className="text-2xl font-semibold text-gray-900">Review Broken Tasks</h2>
             {originalTask && (
@@ -107,7 +107,7 @@ export default function BreakTasksModal({
         </div>
 
         {/* Body - Scrollable */}
-        <div className="px-6 pb-4 overflow-y-auto flex-1 min-h-0">
+        <div className={`px-6 pb-4 overflow-y-auto flex-1 min-h-0 ${colorPalette.accent === hyperactivePalette.accent ? "bg-gradient-to-b from-[#FFD1BF]/40 via-[#FEF2EC]/60 to-[#FEF2EC]" : "bg-white"}`}>
           {editableTasks.length === 0 ? (
             <div className="flex h-full items-center justify-center">
               <p className="text-gray-500">No tasks to display</p>
@@ -151,7 +151,7 @@ export default function BreakTasksModal({
         </div>
 
         {/* Footer */}
-        <div className={`flex items-center justify-between border-t ${colorPalette.borderLight} p-6 pt-4 flex-shrink-0`}>
+        <div className={`flex items-center justify-between border-t ${colorPalette.borderLight} p-6 pt-4 flex-shrink-0 bg-white`}>
           <button
             onClick={() => {
               onDiscard();

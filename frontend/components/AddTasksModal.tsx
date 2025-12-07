@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { violetPalette, skyPalette, periwinklePalette, type ColorPalette } from "./TaskListDrawer";
+import { violetPalette, skyPalette, periwinklePalette, hyperactivePalette, type ColorPalette } from "./TaskListDrawer";
 
 type Task = {
   id: number;
@@ -28,7 +28,7 @@ const getStorageKey = (mode: "inattentive" | "hyperactive") => {
 };
 
 export default function AddTasksModal({ isOpen, onClose, onAddTasks, existingTaskIds, mode = "hyperactive" }: AddTasksModalProps) {
-  const colorPalette: ColorPalette = mode === "inattentive" ? periwinklePalette : violetPalette;
+  const colorPalette: ColorPalette = mode === "inattentive" ? periwinklePalette : hyperactivePalette;
   const [allTasks, setAllTasks] = useState<Array<{ task: Task; listName: string; listId: number }>>([]);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<number>>(new Set());
 
@@ -108,9 +108,9 @@ export default function AddTasksModal({ isOpen, onClose, onAddTasks, existingTas
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
-      <div className={`w-full max-w-2xl max-h-[90vh] rounded-3xl border-2 ${colorPalette.border} bg-white shadow-2xl flex flex-col my-auto`}>
+      <div className={`w-full max-w-2xl max-h-[90vh] rounded-3xl border-2 ${colorPalette.border} bg-white shadow-2xl flex flex-col my-auto overflow-hidden`}>
         {/* Header */}
-        <div className={`flex items-center justify-between p-6 pb-4 flex-shrink-0 border-b ${mode === "inattentive" ? colorPalette.borderLight : "border-violet-200"}`}>
+        <div className={`flex items-center justify-between p-6 pb-4 flex-shrink-0 border-b ${colorPalette.borderLight} bg-white`}>
           <h2 className="text-2xl font-semibold text-gray-900">Add Tasks from Task Lists</h2>
           <button
             onClick={onClose}
@@ -129,7 +129,7 @@ export default function AddTasksModal({ isOpen, onClose, onAddTasks, existingTas
         </div>
 
         {/* Body - Scrollable */}
-        <div className="px-6 pb-4 overflow-y-auto flex-1 min-h-0">
+        <div className={`px-6 pb-4 overflow-y-auto flex-1 min-h-0 ${mode === "hyperactive" ? "bg-gradient-to-b from-[#FFAF91] via-[#FFD1BF] to-[#FEF2EC]" : "bg-white"}`}>
           <div className="mb-4 flex items-center justify-between pt-4">
             <label className="text-sm font-semibold text-gray-900">
               Select Tasks ({selectedTaskIds.size} selected)
@@ -153,13 +153,13 @@ export default function AddTasksModal({ isOpen, onClose, onAddTasks, existingTas
               allTasks.map(({ task, listName, listId }) => (
                 <label
                   key={`${listId}-${task.id}`}
-                  className={`flex cursor-pointer items-start gap-3 rounded-xl border ${mode === "inattentive" ? colorPalette.border : "border-violet-200"} bg-white p-3 transition-colors ${mode === "inattentive" ? colorPalette.hoverBg : "hover:bg-violet-50"}`}
+                  className={`flex cursor-pointer items-start gap-3 rounded-xl border ${colorPalette.borderLight} bg-white p-3 transition-colors ${colorPalette.hoverBg}`}
                 >
                   <input
                     type="checkbox"
                     checked={selectedTaskIds.has(task.id)}
                     onChange={() => handleTaskToggle(task.id)}
-                    className={`mt-1 h-4 w-4 cursor-pointer rounded border-2 ${mode === "inattentive" ? "border-[#ABC4FF]/60 bg-white text-[#ABC4FF] focus:ring-2 focus:ring-[#ABC4FF]/30 focus:border-[#ABC4FF] checked:bg-[#ABC4FF] checked:border-[#ABC4FF]" : "border-violet-300 bg-white text-violet-600 focus:ring-2 focus:ring-violet-300 focus:border-violet-600 checked:bg-violet-600 checked:border-violet-600"} transition-colors`}
+                    className={`mt-1 h-4 w-4 cursor-pointer rounded border-2 ${mode === "inattentive" ? "border-[#ABC4FF]/60 bg-white text-[#ABC4FF] focus:ring-2 focus:ring-[#ABC4FF]/30 focus:border-[#ABC4FF] checked:bg-[#ABC4FF] checked:border-[#ABC4FF]" : mode === "hyperactive" ? "border-[#7FA0BB] bg-white text-[#FF6B35] focus:ring-2 focus:ring-[#FF6B35]/30 focus:border-[#FF6B35] checked:bg-[#FF6B35] checked:border-[#FF6B35]" : "border-violet-300 bg-white text-violet-600 focus:ring-2 focus:ring-violet-300 focus:border-violet-600 checked:bg-violet-600 checked:border-violet-600"} transition-colors`}
                   />
                   <div className="flex-1">
                     <p className="text-sm text-gray-900">{task.text}</p>
@@ -172,11 +172,11 @@ export default function AddTasksModal({ isOpen, onClose, onAddTasks, existingTas
         </div>
 
         {/* Footer */}
-        <div className={`flex items-center justify-end border-t ${mode === "inattentive" ? colorPalette.borderLight : "border-violet-200"} p-6 pt-4 flex-shrink-0`}>
+        <div className={`flex items-center justify-end border-t ${colorPalette.borderLight} p-6 pt-4 flex-shrink-0 bg-white`}>
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
-              className={`rounded-xl border-2 ${mode === "inattentive" ? colorPalette.border : "border-violet-200"} bg-white px-4 py-2 text-sm font-semibold text-gray-900 transition-colors ${mode === "inattentive" ? colorPalette.hoverBg : "hover:bg-violet-50"}`}
+              className={`rounded-xl border-2 ${colorPalette.borderLight} bg-white px-4 py-2 text-sm font-semibold text-gray-900 transition-colors ${colorPalette.hoverBg}`}
             >
               Cancel
             </button>

@@ -5,13 +5,17 @@ type RadialProgressProps = {
   emoji: string;
   size?: number;
   strokeWidth?: number;
+  progressColor?: string;
+  bgColor?: string;
 };
 
 export default function RadialProgress({ 
   percentage, 
   emoji, 
   size = 120, 
-  strokeWidth = 8 
+  strokeWidth = 8,
+  progressColor = "text-violet-500",
+  bgColor = "text-zinc-200"
 }: RadialProgressProps) {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -32,7 +36,7 @@ export default function RadialProgress({
           fill="none"
           stroke="currentColor"
           strokeWidth={strokeWidth}
-          className="text-zinc-200"
+          className={bgColor}
         />
         {/* Progress circle */}
         <circle
@@ -45,7 +49,7 @@ export default function RadialProgress({
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           strokeLinecap="round"
-          className="text-violet-500 transition-all duration-500"
+          className={`${progressColor} transition-all duration-500`}
         />
       </svg>
       {/* Emoji in center */}

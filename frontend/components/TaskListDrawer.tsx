@@ -118,6 +118,22 @@ export const inattentivePalette: ColorPalette = {
     hoverBg: "hover:bg-[#CCCCFF]/30",
 };
 
+export const hyperactivePalette: ColorPalette = {
+    bg: "from-[#FF8D63] via-[#FFAF91] to-[#FFD1BF]",
+    border: "border-[#1A659E]/30",
+    borderLight: "border-[#7FA0BB]/40",
+    shadow: "shadow-[#004E89]/15",
+    text: "text-[#004E89]",
+    textDark: "text-[#004E89]",
+    textMuted: "text-[#1A659E]/70",
+    accent: "bg-[#FF6B35]",
+    accentHover: "hover:bg-[#E03C00]",
+    accentLight: "bg-[#FFAF91]/40",
+    activeBg: "bg-[#FFD1BF]/60",
+    activeText: "text-[#004E89]",
+    hoverBg: "hover:bg-[#FFAF91]/30",
+};
+
 type TaskListDrawerProps = {
     taskLists: TaskList[];
     currentListId: number;

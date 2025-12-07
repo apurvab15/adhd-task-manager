@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import FocusModeModal from "@/components/FocusModeModal";
 import BreakTasksModal from "@/components/BreakTasksModal";
-import { violetPalette, periwinklePalette, combinedPalette, inattentivePalette, type ColorPalette } from "@/components/TaskListDrawer";
+import { violetPalette, periwinklePalette, combinedPalette, inattentivePalette, hyperactivePalette, type ColorPalette } from "@/components/TaskListDrawer";
 import { useTaskBreaker } from "@/hooks/useTaseBreaking";
 
 type Mode = "inattentive" | "hyperactive" | "combined";
@@ -40,7 +40,7 @@ export function TasksPageData() {
   const colorPalette: ColorPalette = 
     mode === "inattentive" ? inattentivePalette :
     mode === "combined" ? combinedPalette :
-    violetPalette;
+    hyperactivePalette;
   
   const [isFocusModalOpen, setIsFocusModalOpen] = useState(false);
   const [taskLists, setTaskLists] = useState<TaskList[]>([]);
@@ -327,19 +327,19 @@ export function TasksPageData() {
     ? "bg-gradient-to-br from-[#EFEFD0] via-[#F7C59F]/20 to-[#EFEFD0]"
     : mode === "inattentive"
     ? `bg-gradient-to-br ${colorPalette.bg}`
-    : "bg-gradient-to-br from-slate-50 via-white to-slate-100";
+    : "bg-gradient-to-b from-[#FFAF91] via-[#FFD1BF] to-[#FEF2EC]";
   
   const navBorderClass = mode === "combined"
     ? "border-[#004E89]/10"
     : mode === "inattentive"
     ? colorPalette.borderLight
-    : "border-black/5";
+    : colorPalette.borderLight;
 
   const navTextClass = mode === "combined"
     ? "text-[#004E89]"
     : mode === "inattentive"
     ? colorPalette.textDark
-    : "text-gray-900";
+    : colorPalette.textDark;
 
   const columnBgClass = mode === "combined"
     ? "bg-white/90"
@@ -349,7 +349,7 @@ export function TasksPageData() {
     ? "border-[#004E89]/20"
     : mode === "inattentive"
     ? colorPalette.border
-    : "border-gray-200";
+    : colorPalette.borderLight;
 
   return (
     <div className={`h-screen overflow-hidden ${backgroundClass} flex flex-col`}>
@@ -373,7 +373,7 @@ export function TasksPageData() {
                   ? "border-[#004E89] text-[#004E89] hover:bg-[#F7C59F]/10"
                   : mode === "inattentive"
                   ? `${colorPalette.accent.replace('bg-', 'border-')} ${colorPalette.accent.replace('bg-', 'text-')} ${colorPalette.accentLight.replace('bg-', 'hover:bg-')}`
-                  : "border-gray-900 text-gray-900 hover:bg-gray-50"
+                  : "border-[#004E89] text-[#004E89] hover:bg-[#FFD1BF]/50"
               } transition-colors`}
               title="Home"
             >
@@ -423,18 +423,14 @@ export function TasksPageData() {
                 <div
                   key={list.id}
                   onClick={() => selectList(list.id)}
-                  className={`rounded-xl border-2 p-4 cursor-pointer transition-all ${
+                  className={`group rounded-xl border-2 p-4 cursor-pointer transition-all ${
                     isSelected
-                      ? mode === "combined"
-                        ? "border-[#004E89]/30 bg-white shadow-md"
-                        : mode === "inattentive"
-                        ? `${colorPalette.border} ${colorPalette.activeBg} shadow-md`
-                        : `${colorPalette.borderLight} ${colorPalette.activeBg} shadow-md`
+                      ? "border-[#004E89]/30 bg-white shadow-md"
                       : mode === "combined"
                       ? "border-[#004E89]/20 bg-white hover:border-[#004E89]/30 hover:shadow-md"
                       : mode === "inattentive"
-                      ? `${colorPalette.border} bg-white hover:${colorPalette.border.replace('border-', 'border-')} hover:shadow-md`
-                      : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"
+                      ? "border-[#004E89]/20 bg-white hover:border-[#004E89]/30 hover:shadow-md"
+                      : "border-[#004E89]/20 bg-white hover:border-[#004E89]/30 hover:shadow-md"
                   }`}
                 >
                   <div className="flex items-start justify-between mb-2">
@@ -450,30 +446,33 @@ export function TasksPageData() {
                         : "text-gray-900"
                     }`}>
                       {list.name}
-            </h3>
-                    {taskLists.length > 1 && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
+                    </h3>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (taskLists.length > 1) {
                           deleteList(list.id);
-                        }}
-                        className="flex-shrink-0 ml-2 p-1 rounded text-gray-400 hover:text-red-500 transition-colors"
-                        title="Delete list"
+                        } else {
+                          alert("Cannot delete the last task list. Please create another list first.");
+                        }
+                      }}
+                      className="flex-shrink-0 ml-2 p-1 rounded text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                      title={taskLists.length > 1 ? "Delete list" : "Cannot delete the last list"}
+                      disabled={taskLists.length === 1}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        className="h-4 w-4"
                       >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                          className="h-4 w-4"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      </button>
-                    )}
+                        <path
+                          fillRule="evenodd"
+                          d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </button>
                   </div>
                   {/* Progress Bar */}
                   <div className="space-y-1">
@@ -642,18 +641,18 @@ export function TasksPageData() {
               {/* Input area with Add and Break Task buttons */}
               <div className={`flex-shrink-0 border-t ${
                 mode === "combined" ? "border-[#004E89]/10" : mode === "inattentive" ? colorPalette.borderLight : colorPalette.border
-              } pt-4 flex items-center gap-2`}>
-                <input
+              } pt-4 flex items-start gap-2`}>
+                <textarea
                   ref={inputRef}
-                  type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
+                    if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
                       addTask(input);
                     }
                   }}
+                  rows={2}
                   placeholder="Add task..."
                   className={`flex-1 rounded-lg border ${
                     mode === "combined" 
@@ -661,30 +660,32 @@ export function TasksPageData() {
                       : mode === "inattentive"
                       ? `${colorPalette.border} ${colorPalette.text} placeholder:${colorPalette.textMuted}/70 focus:border-[#665FD1]`
                       : `${colorPalette.border} ${colorPalette.text} ${colorPalette.borderLight.replace('border-', 'focus:border-')}`
-                  } bg-white px-3 py-2 text-sm focus:outline-none`}
+                  } bg-white px-3 py-2 text-sm focus:outline-none resize-none`}
                 />
-                <button
-                  onClick={() => addTask(input)}
-                  className={`rounded-lg ${colorPalette.accent} px-3 py-2 text-sm font-medium text-white transition ${colorPalette.accentHover}`}
-                >
-                  Add
-                </button>
-                <button
-                  onClick={() => handleBreakTasks(input)}
-                  disabled={isBreaking}
-                  className={`rounded-lg border ${
-                    mode === "combined"
-                      ? "border-[#004E89]/20 text-[#004E89] hover:bg-[#F7C59F]/20"
-                      : mode === "inattentive"
-                      ? `${colorPalette.border} ${colorPalette.text} ${colorPalette.hoverBg}`
-                      : `${colorPalette.borderLight} ${colorPalette.text} ${colorPalette.accentLight.replace('bg-', 'hover:bg-')}`
-                  } bg-white px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
-                  title={isBreaking ? "Breaking down task..." : "Break down task using AI"}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-4">
-                    <path d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684ZM13.949 13.684a1 1 0 0 0-1.898 0l-.184.551a1 1 0 0 1-.632.633l-.551.183a1 1 0 0 0 0 1.898l.551.183a1 1 0 0 1 .633.633l.183.551a1 1 0 0 0 1.898 0l.184-.551a1 1 0 0 1 .632-.633l.551-.183a1 1 0 0 0 0-1.898l-.551-.184a1 1 0 0 1-.633-.632l-.183-.551Z" />
-                  </svg>
-                </button>
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={() => addTask(input)}
+                    className={`rounded-lg ${colorPalette.accent} px-4 py-2 text-sm font-medium text-white transition ${colorPalette.accentHover}`}
+                  >
+                    Add
+                  </button>
+                  <button
+                    onClick={() => handleBreakTasks(input)}
+                    disabled={isBreaking}
+                    className={`rounded-lg border ${
+                      mode === "combined"
+                        ? "border-[#004E89]/20 text-[#004E89] hover:bg-[#F7C59F]/20"
+                        : mode === "inattentive"
+                        ? `${colorPalette.border} ${colorPalette.text} ${colorPalette.hoverBg}`
+                        : `${colorPalette.borderLight} ${colorPalette.text} ${colorPalette.accentLight.replace('bg-', 'hover:bg-')}`
+                    } bg-white px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
+                    title={isBreaking ? "Breaking down task..." : "Break down task using AI"}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-4">
+                      <path d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684ZM13.949 13.684a1 1 0 0 0-1.898 0l-.184.551a1 1 0 0 1-.632.633l-.551.183a1 1 0 0 0 0 1.898l.551.183a1 1 0 0 1 .633.633l.183.551a1 1 0 0 0 1.898 0l.184-.551a1 1 0 0 1 .632-.633l.551-.183a1 1 0 0 0 0-1.898l-.551-.184a1 1 0 0 1-.633-.632l-.183-.551Z" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             </>
           ) : (

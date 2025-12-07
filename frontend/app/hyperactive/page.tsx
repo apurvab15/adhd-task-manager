@@ -9,7 +9,7 @@ import { useTaskBreaker } from "@/hooks/useTaseBreaking";
 import FocusModeModal from "@/components/FocusModeModal";
 import AddTasksModal from "@/components/AddTasksModal";
 import BreakTasksModal from "@/components/BreakTasksModal";
-import { violetPalette, type ColorPalette } from "@/components/TaskListDrawer";
+import { hyperactivePalette, type ColorPalette } from "@/components/TaskListDrawer";
 import JSConfetti from "js-confetti";
 
 const STORAGE_KEY = "adhd-task-lists-hyperactive";
@@ -74,8 +74,8 @@ export default function HyperactivePage() {
   const isInitialMountRef = useRef(true);
   const { breakTask, isBreaking, error } = useTaskBreaker("hyperactive");
 
-  // Use violet palette for hyperactive type
-  const colorPalette: ColorPalette = violetPalette;
+  // Use hyperactive palette for hyperactive type
+  const colorPalette: ColorPalette = hyperactivePalette;
 
   // Initialize confetti
   useEffect(() => {
@@ -493,11 +493,11 @@ export default function HyperactivePage() {
   }, [stats.level]);
 
   return (
-    <div className="h-screen overflow-hidden bg-gradient-to-br from-rose-50 via-white to-slate-100 flex flex-col">
+    <div className="h-screen overflow-hidden bg-gradient-to-b from-[#FFAF91] via-[#FFD1BF] to-[#FEF2EC] flex flex-col">
       {/* Navigation Bar */}
-      <nav className="flex-shrink-0 border-b border-black/5 bg-white/90 backdrop-blur-sm">
+      <nav className="flex-shrink-0 border-b border-[#1A659E]/20 bg-white/95 backdrop-blur-sm shadow-sm">
         <div className="flex items-center gap-4 px-4 py-3">
-          <Link href="/hyperactive" className="flex items-center gap-2 text-violet-600 transition-colors hover:text-violet-700">
+          <Link href="/hyperactive" className="flex items-center gap-2 text-[#004E89] transition-colors hover:text-[#1A659E]">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
@@ -510,28 +510,28 @@ export default function HyperactivePage() {
                 clipRule="evenodd"
               />
             </svg>
-            <span className="text-lg font-semibold">Energetic Hustler</span>
+            <span className="text-lg font-semibold text-[#004E89]">Energetic Hustler</span>
           </Link>
           {/* Progress Bar */}
           <div className="flex-1 flex items-center gap-3">
             {totalToday > 0 ? (
               <>
-                <div className="flex-1 h-2 overflow-hidden rounded-full bg-violet-200/30">
+                <div className="flex-1 h-2 overflow-hidden rounded-full bg-[#7FA0BB]/40">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-violet-500 to-rose-500 transition-all duration-500"
+                    className="h-full rounded-full bg-gradient-to-r from-[#FF6B35] to-[#E03C00] transition-all duration-500"
                     style={{ width: `${(completedToday / totalToday) * 100}%` }}
                   />
                 </div>
-                <span className="text-sm font-medium text-violet-700 whitespace-nowrap">{completedToday}/{totalToday}</span>
+                <span className="text-sm font-medium text-[#004E89] whitespace-nowrap">{completedToday}/{totalToday}</span>
               </>
             ) : (
-              <p className="text-sm font-medium text-violet-600">Let&apos;s get started for today, set our goals!</p>
+              <p className="text-sm font-medium text-[#004E89]">Let&apos;s get started for today, set our goals!</p>
             )}
           </div>
           <div className="flex items-center gap-3">
             <Link
               href="/tasks?mode=hyperactive"
-              className="flex items-center justify-center rounded-lg p-2 bg-white border-2 border-violet-600 text-violet-600 transition-colors hover:bg-violet-50"
+              className="flex items-center justify-center rounded-lg p-2 bg-white border-2 border-[#004E89] text-[#004E89] transition-colors hover:bg-[#FFD1BF]/50"
               title="Task Manager"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" className="h-4 w-4">
@@ -554,30 +554,32 @@ export default function HyperactivePage() {
       {/* 3 Column Layout */}
       <main className="flex-1 flex gap-2 p-2 overflow-hidden min-h-0">
         {/* Left Column - Gamification */}
-        <div className={`flex-1 rounded-2xl border ${colorPalette.border} bg-gradient-to-br ${colorPalette.bg} p-6 shadow-lg ${colorPalette.shadow} flex flex-col overflow-y-auto`}>
-          <div className="space-y-6 flex-1 flex flex-col justify-center">
-            {/* Title */}
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.4em] text-zinc-500">
-                Your Progress
-              </p>
-            </div>
+        <div className="flex-1 rounded-2xl border border-[#1A659E]/20 bg-white p-6 shadow-lg shadow-[#004E89]/10 flex flex-col overflow-y-auto backdrop-blur-sm">
+          {/* Title */}
+          <div className="mb-6 flex-shrink-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.4em] text-[#004E89]">
+              Your Progress
+            </p>
+          </div>
 
+          <div className="space-y-6 flex-1 flex flex-col">
             {/* Radial Progress Bar with Emoji */}
             <div className="flex justify-center">
               <RadialProgress 
                 percentage={progressPercentage} 
                 emoji={getLevelEmoji(stats.level)}
                 size={180}
+                progressColor="text-[#004E89]"
+                bgColor="text-[#BFC9D4]"
               />
             </div>
 
             {/* Level Number with XP */}
             <div className="text-center space-y-1">
-              <p className="text-lg font-bold text-zinc-900">
+              <p className="text-lg font-bold text-[#004E89]">
                 LEVEL {stats.level}
               </p>
-              <p className="text-sm text-zinc-600">
+              <p className="text-sm text-[#1A659E]">
                 {stats.currentLevelXP} / 100 XP
               </p>
             </div>
@@ -616,15 +618,15 @@ export default function HyperactivePage() {
         </div>
 
         {/* Middle Column - Today's Task List */}
-        <div className="flex-[2] rounded-2xl border border-black/5 bg-white/90 p-6 shadow-lg shadow-black/5 flex flex-col min-h-0">
+        <div className="flex-[2] rounded-2xl border border-[#1A659E]/20 bg-white p-6 shadow-lg shadow-[#004E89]/10 flex flex-col min-h-0 backdrop-blur-sm">
           <div className="mb-4 flex-shrink-0">
-            <h2 className="text-2xl font-semibold text-violet-900">Today&apos;s List</h2>
+            <h2 className="text-2xl font-semibold text-[#004E89]">Today&apos;s List</h2>
           </div>
 
           <div className="flex-1 overflow-y-auto mb-4 min-h-0">
             {todayTasks.length === 0 ? (
-              <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-violet-200 bg-violet-50/50 p-8 text-center">
-                <p className="text-sm text-violet-600/60">
+              <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-[#7FA0BB]/50 bg-[#FFD1BF]/40 p-8 text-center">
+                <p className="text-sm text-[#1A659E]/70">
                   No tasks for today. Add some tasks to get started!
                 </p>
               </div>
@@ -633,29 +635,29 @@ export default function HyperactivePage() {
                 {todayTasks.map((task) => (
                   <li
                     key={task.id}
-                    className="flex items-center gap-3 rounded-xl border border-violet-200 bg-white p-3 transition-colors hover:bg-violet-50/50"
+                    className="flex items-center gap-3 rounded-xl border border-[#7FA0BB]/40 bg-white p-3 transition-colors hover:bg-[#FFAF91]/30"
                   >
                     <input
                       type="checkbox"
                       checked={task.done}
                       onChange={() => handleTaskToggle(task.id)}
-                      className="h-4 w-4 cursor-pointer rounded border-violet-300 text-violet-600 focus:ring-violet-500"
+                      className="h-4 w-4 cursor-pointer rounded border-[#7FA0BB] text-[#FF6B35] focus:ring-[#004E89]"
                     />
                     <div className="flex-1 min-w-0">
                       <p
                         className={`text-base break-words ${
-                          task.done ? "line-through text-violet-400" : "text-violet-900"
+                          task.done ? "line-through text-[#7FA0BB]" : "text-[#004E89]"
                         }`}
                       >
                         {task.text}
                       </p>
                       {task.sourceListName && (
-                        <p className="mt-1 text-xs text-violet-500">from {task.sourceListName}</p>
+                        <p className="mt-1 text-xs text-[#1A659E]">from {task.sourceListName}</p>
                       )}
                     </div>
                     <button
                       onClick={() => handleRemoveTask(task.id)}
-                      className="flex-shrink-0 rounded p-1 text-violet-400 transition-colors hover:text-red-500"
+                      className="flex-shrink-0 rounded p-1 text-[#7FA0BB] transition-colors hover:text-[#E03C00]"
                       aria-label="Remove task"
                     >
                       <svg
@@ -678,7 +680,7 @@ export default function HyperactivePage() {
           </div>
 
           {/* Input area */}
-          <div className="flex-shrink-0 border-t border-violet-200/50 pt-4 flex items-start gap-2">
+          <div className="flex-shrink-0 border-t border-[#7FA0BB]/40 pt-4 flex items-start gap-2">
             <textarea
               ref={inputRef}
               value={input}
@@ -691,7 +693,7 @@ export default function HyperactivePage() {
               }}
               rows={2}
               placeholder="Add task..."
-              className="flex-1 rounded-lg border border-violet-200 bg-white px-3 py-2 text-base text-violet-900 placeholder:text-violet-400 focus:border-violet-500 focus:outline-none resize-none"
+              className="flex-1 rounded-lg border border-[#7FA0BB]/40 bg-white px-3 py-2 text-base text-[#004E89] placeholder:text-[#7FA0BB] focus:border-[#004E89] focus:outline-none resize-none"
             />
             <div className="flex flex-col gap-2">
               <button
@@ -703,7 +705,7 @@ export default function HyperactivePage() {
               <button
                 onClick={() => handleBreakTasks(input)}
                 disabled={isBreaking}
-                className="rounded-lg border border-violet-200 bg-white px-4 py-2 text-base font-medium text-violet-900 transition-colors hover:bg-violet-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="rounded-lg border border-[#7FA0BB]/40 bg-white px-4 py-2 text-base font-medium text-[#004E89] transition-colors hover:bg-[#FFAF91]/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 title="Break down task using AI"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-4">
@@ -715,15 +717,15 @@ export default function HyperactivePage() {
         </div>
 
         {/* Right Column - Progress */}
-        <div className="flex-1 rounded-2xl border border-black/5 bg-white/90 p-6 shadow-lg shadow-black/5 flex flex-col overflow-y-auto">
+        <div className="flex-1 rounded-2xl border border-[#1A659E]/20 bg-white p-6 shadow-lg shadow-[#004E89]/10 flex flex-col overflow-y-auto backdrop-blur-sm">
           <div className="mb-4">
-            <h2 className="text-xl font-semibold text-zinc-900">Progress</h2>
+            <h2 className="text-xl font-semibold text-[#004E89]">Progress</h2>
           </div>
 
           <div className="space-y-3 flex-1">
             {listProgress.length === 0 ? (
-              <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-violet-200 bg-violet-50/50 p-8 text-center">
-                <p className="text-sm text-violet-600/60">
+              <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-[#7FA0BB]/50 bg-[#FFD1BF]/40 p-8 text-center">
+                <p className="text-sm text-[#1A659E]/70">
                   No task lists yet. Create one in Task Manager!
                 </p>
               </div>
@@ -731,17 +733,17 @@ export default function HyperactivePage() {
               listProgress.map((list, index) => (
                 <div
                   key={index}
-                  className="rounded-xl border border-violet-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow"
+                  className="rounded-xl border border-[#7FA0BB]/40 bg-white p-4 shadow-sm hover:shadow-md transition-shadow"
                 >
-                  <h4 className="text-base font-semibold text-violet-900 mb-3 truncate">{list.name}</h4>
+                  <h4 className="text-base font-semibold text-[#004E89] mb-3 truncate">{list.name}</h4>
                   <div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-violet-200/30">
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-[#7FA0BB]/40">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-violet-500 to-rose-500 transition-all duration-500"
+                        className="h-full rounded-full bg-gradient-to-r from-[#FF6B35] to-[#E03C00] transition-all duration-500"
                         style={{ width: `${list.rate}%` }}
                       />
                     </div>
-                    <p className="text-sm text-violet-600/60 mt-1">{list.completed}/{list.total} tasks</p>
+                    <p className="text-sm text-[#1A659E]/70 mt-1">{list.completed}/{list.total} tasks</p>
                   </div>
                 </div>
               ))
