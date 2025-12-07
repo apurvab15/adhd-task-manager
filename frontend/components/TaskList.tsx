@@ -310,9 +310,16 @@ export default function TaskListWindow({ mode = "hyperactive", colorPalette }: T
                 list.id === currentListId
                     ? {
                           ...list,
-                          tasks: list.tasks.map((t) =>
-                              t.id === taskId ? { ...t, done: !t.done } : t
-                          ),
+                          tasks: (() => {
+                              // Update task done status
+                              const updatedTasks = list.tasks.map((t) =>
+                                  t.id === taskId ? { ...t, done: !t.done } : t
+                              );
+                              // Reorder: incomplete tasks first, then completed tasks
+                              const incomplete = updatedTasks.filter((t) => !t.done);
+                              const completed = updatedTasks.filter((t) => t.done);
+                              return [...incomplete, ...completed];
+                          })(),
                       }
                     : list
             );

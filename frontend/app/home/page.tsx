@@ -215,7 +215,11 @@ export function HomePageData() {
         window.dispatchEvent(new CustomEvent("taskCompleted"));
       }
       
-      return tasks.map((t) => (t.id === taskId ? { ...t, done: newDone } : t));
+      // Update task and reorder: incomplete tasks first, then completed tasks
+      const updatedTasks = tasks.map((t) => (t.id === taskId ? { ...t, done: newDone } : t));
+      const incomplete = updatedTasks.filter((t) => !t.done);
+      const completed = updatedTasks.filter((t) => t.done);
+      return [...incomplete, ...completed];
     });
   };
 

@@ -87,7 +87,7 @@ export default function BreakTasksModal({
           <div>
             <h2 className="text-2xl font-semibold text-gray-900">Review Broken Tasks</h2>
             {originalTask && (
-              <p className="mt-1 text-sm text-gray-600">Original: {originalTask}</p>
+              <p className="mt-1 text-sm text-gray-600 break-words">Original: {originalTask}</p>
             )}
           </div>
           <button
@@ -119,12 +119,12 @@ export default function BreakTasksModal({
                   key={task.id}
                   className={`flex items-start gap-2 rounded-xl border ${colorPalette.border} bg-white p-2 transition-colors ${colorPalette.hoverBg}`}
                 >
-                  <input
-                    type="text"
+                  <textarea
                     value={task.text}
                     onChange={(e) => handleTaskEdit(task.id, e.target.value)}
-                    className={`flex-1 rounded-lg bg-white px-2 py-1 text-base text-gray-900 placeholder:text-gray-400 focus:${colorPalette.accent.replace('bg-', 'border-')} focus:outline-none resize-none min-h-[60px]`}
-                    //rows={Math.max(1, task.text.split("\n").length)}
+                    className={`flex-1 rounded-lg bg-white px-2 py-1 text-base text-gray-900 placeholder:text-gray-400 focus:${colorPalette.accent.replace('bg-', 'border-')} focus:outline-none resize-none min-h-[60px] border border-transparent focus:border-2`}
+                    rows={Math.max(1, Math.ceil(task.text.length / 50))}
+                    wrap="soft"
                   />
                   <button
                     onClick={() => handleTaskDelete(task.id)}

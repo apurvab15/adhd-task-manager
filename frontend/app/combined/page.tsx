@@ -296,11 +296,17 @@ export default function CombinedPage() {
     setTaskLists((lists) => {
       return lists.map((list) => {
         if (list.id === listId) {
+          // Update task done status
           const updatedTasks = list.tasks.map((t) =>
             t.id === taskId ? { ...t, done: !t.done } : t
           );
           
-          const newStatus = calculateStatus(updatedTasks);
+          // Reorder: incomplete tasks first, then completed tasks
+          const incomplete = updatedTasks.filter((t) => !t.done);
+          const completed = updatedTasks.filter((t) => t.done);
+          const reorderedTasks = [...incomplete, ...completed];
+          
+          const newStatus = calculateStatus(reorderedTasks);
 
           // Trigger confetti when moving to done
           if (newStatus === "done" && list.status !== "done" && confettiRef.current) {
@@ -320,7 +326,7 @@ export default function CombinedPage() {
 
           return {
             ...list,
-            tasks: updatedTasks,
+            tasks: reorderedTasks,
             status: newStatus,
           };
         }
@@ -350,6 +356,11 @@ export default function CombinedPage() {
       const updatedTasks = tasks.map((t) => (t.id === taskId ? { ...t, done: !t.done } : t));
       const toggledTask = updatedTasks.find((t) => t.id === taskId);
       
+      // Reorder: incomplete tasks first, then completed tasks
+      const incomplete = updatedTasks.filter((t) => !t.done);
+      const completed = updatedTasks.filter((t) => t.done);
+      const reorderedTodayTasks = [...incomplete, ...completed];
+      
       // Also update task manager if the task exists there
       if (toggledTask) {
         setTaskLists((lists) => {
@@ -359,7 +370,11 @@ export default function CombinedPage() {
               const updatedTasks = list.tasks.map((t) =>
                 t.id === taskId ? { ...t, done: toggledTask.done } : t
               );
-              const newStatus = calculateStatus(updatedTasks);
+              // Reorder: incomplete tasks first, then completed tasks
+              const incomplete = updatedTasks.filter((t) => !t.done);
+              const completed = updatedTasks.filter((t) => t.done);
+              const reorderedTasks = [...incomplete, ...completed];
+              const newStatus = calculateStatus(reorderedTasks);
               
               // Trigger confetti when moving to done
               if (newStatus === "done" && list.status !== "done" && confettiRef.current) {
@@ -372,7 +387,7 @@ export default function CombinedPage() {
               
               return {
                 ...list,
-                tasks: updatedTasks,
+                tasks: reorderedTasks,
                 status: newStatus,
               };
             }
@@ -381,7 +396,7 @@ export default function CombinedPage() {
         });
       }
       
-      return updatedTasks;
+      return reorderedTodayTasks;
     });
   };
 
