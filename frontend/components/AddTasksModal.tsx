@@ -110,7 +110,7 @@ export default function AddTasksModal({ isOpen, onClose, onAddTasks, existingTas
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
       <div className={`w-full max-w-2xl max-h-[90vh] rounded-3xl border-2 ${colorPalette.border} bg-white shadow-2xl flex flex-col my-auto`}>
         {/* Header */}
-        <div className="flex items-center justify-between p-6 pb-4 flex-shrink-0 border-b border-[#7085FF]/10">
+        <div className={`flex items-center justify-between p-6 pb-4 flex-shrink-0 border-b ${mode === "inattentive" ? colorPalette.borderLight : "border-violet-200"}`}>
           <h2 className="text-2xl font-semibold text-gray-900">Add Tasks from Task Lists</h2>
           <button
             onClick={onClose}
@@ -153,13 +153,13 @@ export default function AddTasksModal({ isOpen, onClose, onAddTasks, existingTas
               allTasks.map(({ task, listName, listId }) => (
                 <label
                   key={`${listId}-${task.id}`}
-                  className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#7085FF]/20 bg-white p-3 transition-colors hover:bg-[#7085FF]/5"
+                  className={`flex cursor-pointer items-start gap-3 rounded-xl border ${mode === "inattentive" ? colorPalette.border : "border-violet-200"} bg-white p-3 transition-colors ${mode === "inattentive" ? colorPalette.hoverBg : "hover:bg-violet-50"}`}
                 >
                   <input
                     type="checkbox"
                     checked={selectedTaskIds.has(task.id)}
                     onChange={() => handleTaskToggle(task.id)}
-                    className={`mt-1 h-4 w-4 cursor-pointer rounded border-2 border-[#7085FF]/60 bg-white text-[#7085FF] focus:ring-2 focus:ring-[#7085FF]/30 focus:border-[#7085FF] checked:bg-[#7085FF] checked:border-[#7085FF] transition-colors`}
+                    className={`mt-1 h-4 w-4 cursor-pointer rounded border-2 ${mode === "inattentive" ? "border-[#ABC4FF]/60 bg-white text-[#ABC4FF] focus:ring-2 focus:ring-[#ABC4FF]/30 focus:border-[#ABC4FF] checked:bg-[#ABC4FF] checked:border-[#ABC4FF]" : "border-violet-300 bg-white text-violet-600 focus:ring-2 focus:ring-violet-300 focus:border-violet-600 checked:bg-violet-600 checked:border-violet-600"} transition-colors`}
                   />
                   <div className="flex-1">
                     <p className="text-sm text-gray-900">{task.text}</p>
@@ -172,11 +172,11 @@ export default function AddTasksModal({ isOpen, onClose, onAddTasks, existingTas
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end border-t border-[#7085FF]/10 p-6 pt-4 flex-shrink-0">
+        <div className={`flex items-center justify-end border-t ${mode === "inattentive" ? colorPalette.borderLight : "border-violet-200"} p-6 pt-4 flex-shrink-0`}>
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
-              className="rounded-xl border-2 border-[#7085FF]/20 bg-white px-4 py-2 text-sm font-semibold text-gray-900 transition-colors hover:bg-[#7085FF]/10"
+              className={`rounded-xl border-2 ${mode === "inattentive" ? colorPalette.border : "border-violet-200"} bg-white px-4 py-2 text-sm font-semibold text-gray-900 transition-colors ${mode === "inattentive" ? colorPalette.hoverBg : "hover:bg-violet-50"}`}
             >
               Cancel
             </button>

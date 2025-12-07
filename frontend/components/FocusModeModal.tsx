@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { violetPalette, skyPalette, periwinklePalette, type ColorPalette } from "./TaskListDrawer";
+import { violetPalette, skyPalette, periwinklePalette, combinedPalette, inattentivePalette, type ColorPalette } from "./TaskListDrawer";
 import { awardXPForFocusMode } from "@/utils/gamification";
 
 type Task = {
@@ -34,7 +34,10 @@ const FOCUS_MODE_TIMER_KEY = "adhd-focus-mode-timer";
 
 export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }: FocusModeModalProps) {
   const router = useRouter();
-  const colorPalette: ColorPalette = mode === "inattentive" ? periwinklePalette : violetPalette;
+  const colorPalette: ColorPalette = 
+    mode === "inattentive" ? inattentivePalette :
+    mode === "combined" ? combinedPalette :
+    violetPalette;
   const [allTasks, setAllTasks] = useState<Array<{ task: Task; listName: string }>>([]);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<number>>(new Set());
   const [timerMinutes, setTimerMinutes] = useState(25);
@@ -145,7 +148,7 @@ export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }
               <button
                 type="button"
                 onClick={() => setTimerMinutes(Math.max(1, timerMinutes - 1))}
-                className={`flex-shrink-0 rounded-xl border ${colorPalette.borderLight} bg-white px-3 py-2 ${colorPalette.textDark} hover:bg-gray-50 transition-colors ${mode === "inattentive" ? "hover:border-[#7085FF]" : "hover:border-violet-400"} focus:outline-none`}
+                className={`flex-shrink-0 rounded-xl border ${colorPalette.borderLight} bg-white px-3 py-2 ${colorPalette.textDark} hover:bg-gray-50 transition-colors ${mode === "inattentive" ? "hover:border-[#665FD1]" : "hover:border-violet-400"} focus:outline-none`}
                 aria-label="Decrease duration"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
@@ -171,12 +174,12 @@ export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }
                     setTimerMinutes(120);
                   }
                 }}
-                className={`flex-1 rounded-xl border ${colorPalette.borderLight} bg-white px-4 py-2 text-center ${colorPalette.textDark} ${mode === "inattentive" ? "focus:border-[#7085FF]" : "focus:border-violet-400"} focus:outline-none`}
+                className={`flex-1 rounded-xl border ${colorPalette.borderLight} bg-white px-4 py-2 text-center ${colorPalette.textDark} ${mode === "inattentive" ? "focus:border-[#665FD1]" : "focus:border-violet-400"} focus:outline-none`}
               />
               <button
                 type="button"
                 onClick={() => setTimerMinutes(Math.min(120, timerMinutes + 1))}
-                className={`flex-shrink-0 rounded-xl border ${colorPalette.borderLight} bg-white px-3 py-2 ${colorPalette.textDark} hover:bg-gray-50 transition-colors ${mode === "inattentive" ? "hover:border-[#7085FF]" : "hover:border-violet-400"} focus:outline-none`}
+                className={`flex-shrink-0 rounded-xl border ${colorPalette.borderLight} bg-white px-3 py-2 ${colorPalette.textDark} hover:bg-gray-50 transition-colors ${mode === "inattentive" ? "hover:border-[#665FD1]" : "hover:border-violet-400"} focus:outline-none`}
                 aria-label="Increase duration"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
@@ -218,7 +221,7 @@ export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }
                         type="checkbox"
                         checked={selectedTaskIds.has(task.id)}
                         onChange={() => handleTaskToggle(task.id)}
-                        className={`mt-1 h-4 w-4 cursor-pointer rounded border-2 border-[#7085FF]/60 bg-white text-[#7085FF] focus:ring-2 focus:ring-[#7085FF]/30 focus:border-[#7085FF] checked:bg-[#7085FF] checked:border-[#7085FF]`}
+                        className="mt-1 h-4 w-4 cursor-pointer rounded border-2 border-[#7C83BC]/60 bg-white text-[#665FD1] focus:ring-2 focus:ring-[#665FD1]/30 focus:border-[#665FD1] checked:bg-[#665FD1] checked:border-[#665FD1]"
                       />
                       <div className="flex-1">
                         <p className={`text-sm ${colorPalette.textDark}`}>{task.text}</p>

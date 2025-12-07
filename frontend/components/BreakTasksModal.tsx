@@ -83,7 +83,7 @@ export default function BreakTasksModal({
         style={{ height: "85vh" }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 pb-4 flex-shrink-0 border-b border-[#7085FF]/10">
+        <div className={`flex items-center justify-between p-6 pb-4 flex-shrink-0 border-b ${colorPalette.borderLight}`}>
           <div>
             <h2 className="text-2xl font-semibold text-gray-900">Review Broken Tasks</h2>
             {originalTask && (
@@ -117,13 +117,13 @@ export default function BreakTasksModal({
               {editableTasks.map((task) => (
                 <div
                   key={task.id}
-                  className="flex items-start gap-2 rounded-xl border border-[#7085FF]/20 bg-white p-2 transition-colors hover:bg-[#7085FF]/5"
+                  className={`flex items-start gap-2 rounded-xl border ${colorPalette.border} bg-white p-2 transition-colors ${colorPalette.hoverBg}`}
                 >
                   <input
                     type="text"
                     value={task.text}
                     onChange={(e) => handleTaskEdit(task.id, e.target.value)}
-                    className="flex-1 rounded-lg bg-white px-2 py-1 text-base text-gray-900 placeholder:text-gray-400 focus:border-[#7085FF] focus:outline-none resize-none min-h-[60px]"
+                    className={`flex-1 rounded-lg bg-white px-2 py-1 text-base text-gray-900 placeholder:text-gray-400 focus:${colorPalette.accent.replace('bg-', 'border-')} focus:outline-none resize-none min-h-[60px]`}
                     //rows={Math.max(1, task.text.split("\n").length)}
                   />
                   <button
@@ -151,7 +151,7 @@ export default function BreakTasksModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between border-t border-[#7085FF]/10 p-6 pt-4 flex-shrink-0">
+        <div className={`flex items-center justify-between border-t ${colorPalette.borderLight} p-6 pt-4 flex-shrink-0`}>
           <button
             onClick={() => {
               onDiscard();
@@ -164,7 +164,7 @@ export default function BreakTasksModal({
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
-              className="rounded-xl border-2 border-[#7085FF]/20 bg-white px-4 py-2 text-sm font-semibold text-gray-900 transition-colors hover:bg-[#7085FF]/10"
+              className={`rounded-xl border-2 ${colorPalette.border} bg-white px-4 py-2 text-sm font-semibold text-gray-900 transition-colors ${colorPalette.hoverBg}`}
             >
               Cancel
             </button>

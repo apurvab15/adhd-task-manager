@@ -23,19 +23,19 @@ export type ColorPalette = {
 };
 
 export const violetPalette: ColorPalette = {
-    bg: "from-white via-violet-50 to-white",
-    border: "border-violet-100",
-    borderLight: "border-violet-200",
-    shadow: "shadow-violet-100",
-    text: "text-violet-900",
-    textDark: "text-violet-950",
-    textMuted: "text-violet-500",
-    accent: "bg-violet-600",
-    accentHover: "hover:bg-violet-500",
-    accentLight: "bg-violet-50",
-    activeBg: "bg-violet-100",
-    activeText: "text-violet-900",
-    hoverBg: "hover:bg-white",
+    bg: "from-[#8ecae6] via-[#8ecae6]/40 to-[#8ecae6]",
+    border: "border-[#023047]/20",
+    borderLight: "border-[#219ebc]/30",
+    shadow: "shadow-[#219ebc]/10",
+    text: "text-[#023047]",
+    textDark: "text-[#023047]",
+    textMuted: "text-[#023047]/60",
+    accent: "bg-[#fb8500]",
+    accentHover: "hover:bg-[#e67400]",
+    accentLight: "bg-[#ffb703]/20",
+    activeBg: "bg-[#8ecae6]",
+    activeText: "text-[#023047]",
+    hoverBg: "hover:bg-[#8ecae6]/50",
 };
 
 export const skyPalette: ColorPalette = {
@@ -71,19 +71,19 @@ export const orangePalette: ColorPalette = {
 };
 
 export const periwinklePalette: ColorPalette = {
-    bg: "from-white via-[#7085FF]/5 to-white",
-    border: "border-[#7085FF]/20",
-    borderLight: "border-[#7085FF]/30",
-    shadow: "shadow-[#7085FF]/10",
-    text: "text-[#7085FF]",
-    textDark: "text-[#4A5FCC]",
-    textMuted: "text-[#7085FF]/60",
-    accent: "bg-[#7085FF]",
-    accentHover: "hover:bg-[#5A75FF]",
-    accentLight: "bg-[#7085FF]/10",
-    activeBg: "bg-[#7085FF]/15",
-    activeText: "text-[#4A5FCC]",
-    hoverBg: "hover:bg-[#7085FF]/5",
+    bg: "from-[#EDF2FB] via-[#E2EAFC] to-[#EDF2FB]",
+    border: "border-[#CCDBFD]/40",
+    borderLight: "border-[#D7E3FC]/50",
+    shadow: "shadow-[#ABC4FF]/5",
+    text: "text-slate-700",
+    textDark: "text-slate-800",
+    textMuted: "text-slate-500",
+    accent: "bg-[#ABC4FF]",
+    accentHover: "hover:bg-[#9BB5FF]",
+    accentLight: "bg-[#D7E3FC]/40",
+    activeBg: "bg-[#E2EAFC]",
+    activeText: "text-slate-800",
+    hoverBg: "hover:bg-[#EDF2FB]",
 };
 
 export const combinedPalette: ColorPalette = {
@@ -100,6 +100,22 @@ export const combinedPalette: ColorPalette = {
     activeBg: "bg-[#EFEFD0]",
     activeText: "text-[#1A659E]",
     hoverBg: "hover:bg-[#F7C59F]/10",
+};
+
+export const inattentivePalette: ColorPalette = {
+    bg: "from-white via-[#E6E6FF] to-[#CCCCFF]",
+    border: "border-[#7C83BC]/30",
+    borderLight: "border-[#7C83BC]/20",
+    shadow: "shadow-[#6667AB]/10",
+    text: "text-[#3F49A4]",
+    textDark: "text-[#3F49A4]",
+    textMuted: "text-[#6667AB]",
+    accent: "bg-[#665FD1]",
+    accentHover: "hover:bg-[#3F49A4]",
+    accentLight: "bg-[#CCCCFF]/40",
+    activeBg: "bg-[#E6E6FF]",
+    activeText: "text-[#3F49A4]",
+    hoverBg: "hover:bg-[#CCCCFF]/30",
 };
 
 type TaskListDrawerProps = {

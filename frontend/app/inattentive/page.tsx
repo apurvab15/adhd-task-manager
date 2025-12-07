@@ -7,7 +7,7 @@ import { awardXPForTask, revokeXPForTaskCompletion, penalizeXPForUncompletedTask
 import FocusModeModal from "@/components/FocusModeModal";
 import AddTasksModal from "@/components/AddTasksModal";
 import BreakTasksModal from "@/components/BreakTasksModal";
-import { periwinklePalette, type ColorPalette } from "@/components/TaskListDrawer";
+import { inattentivePalette, type ColorPalette } from "@/components/TaskListDrawer";
 import JSConfetti from "js-confetti";
 
 const STORAGE_KEY = "adhd-task-lists-inattentive";
@@ -44,8 +44,8 @@ export default function InattentivePage() {
   const hasTriggeredConfettiRef = useRef(false);
   const { breakTask, isBreaking, error } = useTaskBreaker("inattentive");
 
-  // Use periwinkle palette for inattentive type
-  const colorPalette: ColorPalette = periwinklePalette;
+  // Use inattentive palette for inattentive type
+  const colorPalette: ColorPalette = inattentivePalette;
 
   // Initialize confetti
   useEffect(() => {
@@ -314,11 +314,11 @@ export default function InattentivePage() {
   }, [allTasksCompleted]);
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Minimal Navigation */}
-      <nav className="border-b border-[#7085FF]/10 bg-white/90 backdrop-blur-sm">
-        <div className="flex items-center justify-between px-8 py-2">
-          <Link href="/inattentive" className="text-[#7085FF] transition-colors hover:text-[#5A75FF]">
+    <div className={`h-screen overflow-hidden bg-gradient-to-br ${colorPalette.bg} flex flex-col`}>
+      {/* Navigation Bar */}
+      <nav className={`flex-shrink-0 border-b ${colorPalette.borderLight} bg-white/90 backdrop-blur-sm`}>
+        <div className="flex items-center gap-4 px-4 py-3">
+          <Link href="/inattentive" className={`flex items-center gap-2 ${colorPalette.textDark} transition-colors hover:${colorPalette.textDark.replace('text-', 'text-')}`}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
@@ -331,11 +331,28 @@ export default function InattentivePage() {
                 clipRule="evenodd"
               />
             </svg>
+            <span className="text-lg font-semibold">Calm Organizer</span>
           </Link>
-          <div className="flex items-center gap-6">
+          {/* Progress Bar */}
+          <div className="flex-1 flex items-center gap-3">
+            {totalToday > 0 ? (
+              <>
+                <div className={`flex-1 h-2 overflow-hidden rounded-full ${colorPalette.accentLight.replace('bg-', 'bg-')}`}>
+                  <div
+                    className={`h-full rounded-full ${colorPalette.accent} transition-all duration-500`}
+                    style={{ width: `${(completedToday / totalToday) * 100}%` }}
+                  />
+                </div>
+                <span className={`text-sm font-medium ${colorPalette.textDark} whitespace-nowrap`}>{completedToday}/{totalToday}</span>
+              </>
+            ) : (
+              <p className={`text-sm font-medium ${colorPalette.text}`}>Let&apos;s get started for today, set our goals!</p>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
             <Link
               href="/tasks?mode=inattentive"
-              className="flex items-center justify-center rounded-xl p-2 bg-white border-2 border-[#7085FF] text-[#7085FF] transition-colors hover:bg-[#7085FF]/10"
+              className={`flex items-center justify-center rounded-lg p-2 bg-white border-2 ${colorPalette.accent.replace('bg-', 'border-')} ${colorPalette.text} transition-colors ${colorPalette.hoverBg.replace('hover:bg-', 'hover:bg-')}`}
               title="Task Manager"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" className="h-4 w-4">
@@ -344,7 +361,7 @@ export default function InattentivePage() {
             </Link>
             <button
               onClick={() => setIsFocusModalOpen(true)}
-              className="flex items-center justify-center rounded-xl p-2 bg-white border-2 border-[#7085FF] text-[#7085FF] transition-colors hover:bg-[#7085FF]/10"
+              className={`flex items-center justify-center rounded-lg p-2 ${colorPalette.accent} text-white transition-colors ${colorPalette.accentHover}`}
               title="Focus Mode"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" className="h-4 w-4">
@@ -355,64 +372,53 @@ export default function InattentivePage() {
         </div>
       </nav>
 
-      {/* 2 Column Layout - Simplified for Inattentive Type */}
-      <main className="flex h-[calc(100vh-65px)] gap-8 p-8">
-        {/* Left Column - Today's List */}
-        <div className="flex-1 rounded-3xl border-2 border-[#7085FF]/20 bg-white p-12 flex flex-col">
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-4xl font-bold text-gray-900">Today&apos;s List</h2>
-            </div>
-            <p className="text-2xl text-gray-700">
-              {completedToday} of {totalToday} completed
-            </p>
+      {/* Main Layout */}
+      <main className="flex-1 flex gap-4 p-4 overflow-hidden min-h-0">
+        {/* Left Column - Today's List (50%) */}
+        <div className={`w-1/2 rounded-2xl border ${colorPalette.border} bg-white/90 p-6 shadow-lg flex flex-col min-h-0`}>
+          <div className="mb-4 flex-shrink-0">
+            <h2 className={`text-2xl font-semibold ${colorPalette.textDark}`}>Today&apos;s List</h2>
           </div>
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto mb-4 min-h-0">
             {todayTasks.length === 0 ? (
-              <div 
-                onClick={() => inputRef.current?.focus()}
-                className="flex h-full items-center justify-center rounded-xl border-2 border-dashed border-[#7085FF]/20 bg-[#7085FF]/5 p-12 text-center cursor-pointer transition-colors hover:bg-[#7085FF]/10"
-              >
-                <p className="text-2xl text-gray-700">
-                  Let's add some tasks!
+              <div className={`flex h-full items-center justify-center rounded-xl border border-dashed ${colorPalette.border} ${colorPalette.accentLight} p-8 text-center`}>
+                <p className={`text-sm ${colorPalette.textMuted}`}>
+                  No tasks for today. Add some tasks to get started!
                 </p>
               </div>
             ) : (
-              <ul className="space-y-4">
+              <ul className="space-y-2">
                 {todayTasks.map((task) => (
                   <li
                     key={task.id}
-                    className={`flex items-start gap-4 rounded-xl border-2 p-4 cursor-pointer transition-colors ${
-                      task.done
-                        ? "border-[#7085FF]/40 bg-[#7085FF]/5"
-                        : "border-[#7085FF] bg-white hover:bg-[#7085FF]/10"
-                    }`}
+                    className={`flex items-center gap-3 rounded-xl border ${colorPalette.border} bg-white p-3 transition-colors ${colorPalette.hoverBg}`}
                   >
                     <input
                       type="checkbox"
                       checked={task.done}
                       onChange={() => handleTaskToggle(task.id)}
-                      className="h-8 w-8 cursor-pointer rounded border-2 border-[#7085FF]/60 bg-white text-[#7085FF] focus:ring-2 focus:ring-[#7085FF]/30 focus:border-[#7085FF] checked:bg-[#7085FF] checked:border-[#7085FF] mt-1 transition-colors"
+                      className="h-4 w-4 cursor-pointer rounded border-[#7C83BC]/40 text-[#665FD1] focus:ring-[#665FD1]"
                     />
                     <div className="flex-1 min-w-0">
                       <p
-                        className={`text-2xl leading-relaxed ${task.done ? "line-through text-gray-400" : "text-gray-900"
-                          }`}
+                        className={`text-sm break-words ${
+                          task.done ? `line-through ${colorPalette.textMuted}` : colorPalette.text
+                        }`}
                       >
                         {task.text}
                       </p>
                     </div>
                     <button
                       onClick={() => handleRemoveTask(task.id)}
-                      className="flex-shrink-0 rounded-lg p-2 text-gray-400 transition-colors hover:text-red-500"
+                      className={`flex-shrink-0 rounded p-1 ${colorPalette.textMuted} transition-colors hover:text-red-500`}
                       aria-label="Remove task"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         viewBox="0 0 20 20"
                         fill="currentColor"
-                        className="h-6 w-6"
+                        className="h-4 w-4"
                       >
                         <path
                           fillRule="evenodd"
@@ -427,46 +433,44 @@ export default function InattentivePage() {
             )}
           </div>
 
-          {/* Input area - Small and Simple */}
-          <div className="mt-6 border-t border-[#7085FF]/10 pt-4 flex items-start gap-2">
-            <textarea
+          {/* Input area */}
+          <div className={`flex-shrink-0 border-t ${colorPalette.borderLight} pt-4 flex items-center gap-2`}>
+            <input
               ref={inputRef}
+              type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
+                if (e.key === "Enter") {
                   e.preventDefault();
                   addTask(input);
                 }
               }}
-              rows={2}
               placeholder="Add task..."
-              className="flex-1 rounded-lg border border-[#7085FF]/20 bg-white px-3 py-2 text-lg text-gray-900 placeholder:text-gray-400 focus:border-[#7085FF] focus:outline-none resize-none"
+              className={`flex-1 rounded-lg border ${colorPalette.border} bg-white px-3 py-2 text-sm ${colorPalette.text} placeholder:${colorPalette.textMuted}/70 focus:border-[#665FD1] focus:outline-none`}
             />
-            <div className="flex flex-col gap-2">
-              <button
-                onClick={() => addTask(input)}
-                className={`rounded-lg ${colorPalette.accent} px-4 py-2 text-lg font-medium text-white transition ${colorPalette.accentHover}`}
-              >
-                Add
-              </button>
-              <button
-                onClick={() => handleBreakTasks(input)} 
-                disabled={isBreaking}
-                title={isBreaking ? "Breaking down task..." : "Break down task"}
-                className={`text-lg font-medium border-2 border-[#7085FF] text-[#7085FF] px-4 py-2 rounded-lg transition-colors hover:bg-[#7085FF]/10 flex items-center justify-center gap-2`}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-5">
-                  <path d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684ZM13.949 13.684a1 1 0 0 0-1.898 0l-.184.551a1 1 0 0 1-.632.633l-.551.183a1 1 0 0 0 0 1.898l.551.183a1 1 0 0 1 .633.633l.183.551a1 1 0 0 0 1.898 0l.184-.551a1 1 0 0 1 .632-.633l.551-.183a1 1 0 0 0 0-1.898l-.551-.184a1 1 0 0 1-.633-.632l-.183-.551Z" />
-                </svg>
-              </button>
-            </div>
+            <button
+              onClick={() => addTask(input)}
+              className={`rounded-lg ${colorPalette.accent} px-3 py-2 text-sm font-medium text-white transition ${colorPalette.accentHover}`}
+            >
+              Add
+            </button>
+            <button
+              onClick={() => handleBreakTasks(input)} 
+              disabled={isBreaking}
+              className={`rounded-lg border ${colorPalette.border} bg-white px-3 py-2 text-sm font-medium ${colorPalette.text} transition-colors ${colorPalette.hoverBg} disabled:opacity-50 disabled:cursor-not-allowed`}
+              title="Break down task using AI"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-4">
+                <path d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684ZM13.949 13.684a1 1 0 0 0-1.898 0l-.184.551a1 1 0 0 1-.632.633l-.551.183a1 1 0 0 0 0 1.898l.551.183a1 1 0 0 1 .633.633l.183.551a1 1 0 0 0 1.898 0l.184-.551a1 1 0 0 1 .632-.633l.551-.183a1 1 0 0 0 0-1.898l-.551-.184a1 1 0 0 1-.633-.632l-.183-.551Z" />
+              </svg>
+            </button>
           </div>
         </div>
 
-        {/* Right Column - Next Step */}
-        <div className="flex-1 rounded-3xl border-2 border-[#7085FF]/20 bg-white p-12 flex flex-col justify-center">
-          <h2 className="text-4xl font-bold text-gray-900 mb-8">Next Step</h2>
+        {/* Right Column - Next Step (50%) */}
+        <div className={`w-1/2 rounded-2xl border-2 ${colorPalette.border} bg-white p-12 flex flex-col min-h-0`}>
+          <h2 className={`text-4xl font-bold ${colorPalette.textDark} mb-8`}>Next Step</h2>
 
           {nextTask ? (
             <div className="space-y-6">
@@ -475,18 +479,18 @@ export default function InattentivePage() {
                   type="checkbox"
                   checked={nextTask.done}
                   onChange={() => handleTaskToggle(nextTask.id)}
-                  className="h-8 w-8 cursor-pointer rounded border-2 border-[#7085FF]/60 bg-white text-[#7085FF] focus:ring-2 focus:ring-[#7085FF]/30 focus:border-[#7085FF] checked:bg-[#7085FF] checked:border-[#7085FF] mt-1 transition-colors"
+                  className="h-8 w-8 cursor-pointer rounded border-2 border-[#7C83BC]/40 bg-white text-[#665FD1] focus:ring-2 focus:ring-[#665FD1]/30 focus:border-[#665FD1] checked:bg-[#665FD1] checked:border-[#665FD1] mt-1 transition-colors"
                 />
-                <p className="text-3xl font-medium text-gray-900 leading-relaxed flex-1">
+                <p className={`text-4xl font-medium ${colorPalette.textDark} leading-relaxed flex-1`}>
                   {nextTask.text}
                 </p>
               </div>
             </div>
           ) : (
             <div className="space-y-6">
-              <p className="text-3xl font-medium text-gray-400 leading-relaxed">
-                {todayTasks.length === 0
-                  ? "Lets get started!"
+              <p className={`text-4xl font-medium ${colorPalette.textMuted} leading-relaxed`}>
+                {todayTasks.length === 0 
+                  ? "Let's get started!" 
                   : "All tasks completed! 🎉"}
               </p>
             </div>

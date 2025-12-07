@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import FocusModeModal from "@/components/FocusModeModal";
 import BreakTasksModal from "@/components/BreakTasksModal";
-import { violetPalette, periwinklePalette, combinedPalette, type ColorPalette } from "@/components/TaskListDrawer";
+import { violetPalette, periwinklePalette, combinedPalette, inattentivePalette, type ColorPalette } from "@/components/TaskListDrawer";
 import { useTaskBreaker } from "@/hooks/useTaseBreaking";
 
 type Mode = "inattentive" | "hyperactive" | "combined";
@@ -38,7 +38,7 @@ export function TasksPageData() {
     : "hyperactive";
   
   const colorPalette: ColorPalette = 
-    mode === "inattentive" ? periwinklePalette :
+    mode === "inattentive" ? inattentivePalette :
     mode === "combined" ? combinedPalette :
     violetPalette;
   
@@ -325,14 +325,20 @@ export function TasksPageData() {
   // Background and styling based on mode
   const backgroundClass = mode === "combined" 
     ? "bg-gradient-to-br from-[#EFEFD0] via-[#F7C59F]/20 to-[#EFEFD0]"
+    : mode === "inattentive"
+    ? `bg-gradient-to-br ${colorPalette.bg}`
     : "bg-gradient-to-br from-slate-50 via-white to-slate-100";
   
   const navBorderClass = mode === "combined"
     ? "border-[#004E89]/10"
+    : mode === "inattentive"
+    ? colorPalette.borderLight
     : "border-black/5";
 
   const navTextClass = mode === "combined"
     ? "text-[#004E89]"
+    : mode === "inattentive"
+    ? colorPalette.textDark
     : "text-gray-900";
 
   const columnBgClass = mode === "combined"
@@ -341,6 +347,8 @@ export function TasksPageData() {
 
   const columnBorderClass = mode === "combined"
     ? "border-[#004E89]/20"
+    : mode === "inattentive"
+    ? colorPalette.border
     : "border-gray-200";
 
   return (
@@ -363,6 +371,8 @@ export function TasksPageData() {
               className={`flex items-center justify-center rounded-lg p-2 bg-white border-2 ${
                 mode === "combined" 
                   ? "border-[#004E89] text-[#004E89] hover:bg-[#F7C59F]/10"
+                  : mode === "inattentive"
+                  ? `${colorPalette.accent.replace('bg-', 'border-')} ${colorPalette.accent.replace('bg-', 'text-')} ${colorPalette.accentLight.replace('bg-', 'hover:bg-')}`
                   : "border-gray-900 text-gray-900 hover:bg-gray-50"
               } transition-colors`}
               title="Home"
@@ -398,7 +408,7 @@ export function TasksPageData() {
         {/* Left Column - Task Lists (30%) */}
         <div className={`w-[30%] rounded-2xl border ${columnBorderClass} ${columnBgClass} p-4 shadow-lg flex flex-col min-h-0`}>
           <div className="mb-4 flex-shrink-0">
-            <h2 className={`text-lg font-semibold ${mode === "combined" ? "text-[#004E89]" : "text-gray-900"}`}>Task Lists</h2>
+            <h2 className={`text-lg font-semibold ${mode === "combined" ? "text-[#004E89]" : mode === "inattentive" ? colorPalette.textDark : "text-gray-900"}`}>Task Lists</h2>
           </div>
 
           {/* Scrollable list of task list cards */}
@@ -417,9 +427,13 @@ export function TasksPageData() {
                     isSelected
                       ? mode === "combined"
                         ? "border-[#004E89]/30 bg-white shadow-md"
+                        : mode === "inattentive"
+                        ? `${colorPalette.border} ${colorPalette.activeBg} shadow-md`
                         : `${colorPalette.borderLight} ${colorPalette.activeBg} shadow-md`
                       : mode === "combined"
                       ? "border-[#004E89]/20 bg-white hover:border-[#004E89]/30 hover:shadow-md"
+                      : mode === "inattentive"
+                      ? `${colorPalette.border} bg-white hover:${colorPalette.border.replace('border-', 'border-')} hover:shadow-md`
                       : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"
                   }`}
                 >
@@ -431,6 +445,8 @@ export function TasksPageData() {
                           : colorPalette.textDark 
                         : mode === "combined"
                         ? "text-[#004E89]"
+                        : mode === "inattentive"
+                        ? colorPalette.textDark
                         : "text-gray-900"
                     }`}>
                       {list.name}
@@ -462,7 +478,7 @@ export function TasksPageData() {
                   {/* Progress Bar */}
                   <div className="space-y-1">
                     <div className={`h-2 w-full overflow-hidden rounded-full ${
-                      mode === "combined" ? "bg-[#F7C59F]/30" : "bg-gray-200"
+                      mode === "combined" ? "bg-[#F7C59F]/30" : mode === "inattentive" ? colorPalette.accentLight : "bg-gray-200"
                     }`}>
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${
@@ -476,7 +492,7 @@ export function TasksPageData() {
                       />
                     </div>
                     <p className={`text-xs ${
-                      mode === "combined" ? "text-[#004E89]/60" : "text-gray-500"
+                      mode === "combined" ? "text-[#004E89]/60" : mode === "inattentive" ? colorPalette.textMuted : "text-gray-500"
                     }`}>
                       {completedCount}/{totalCount} tasks
                     </p>
@@ -553,7 +569,7 @@ export function TasksPageData() {
               <div className="flex-1 overflow-y-auto mb-4 min-h-0">
                 {currentList.tasks.length === 0 ? (
                   <div className={`flex h-full items-center justify-center rounded-xl border border-dashed ${
-                    mode === "combined" ? "border-[#004E89]/20 bg-[#F7C59F]/10" : "border-gray-200 bg-gray-50"
+                    mode === "combined" ? "border-[#004E89]/20 bg-[#F7C59F]/10" : mode === "inattentive" ? `${colorPalette.border} ${colorPalette.accentLight}` : "border-gray-200 bg-gray-50"
                   } p-8 text-center`}>
                     <p className={`text-sm ${mode === "combined" ? "text-[#004E89]/60" : colorPalette.textMuted}`}>
                       No tasks yet — add one!
@@ -567,6 +583,8 @@ export function TasksPageData() {
                         className={`flex items-center gap-3 rounded-xl border ${
                           mode === "combined" 
                             ? "border-[#004E89]/20 bg-white hover:bg-[#F7C59F]/10" 
+                            : mode === "inattentive"
+                            ? `${colorPalette.border} bg-white ${colorPalette.hoverBg}`
                             : `${colorPalette.border} bg-white hover:shadow-sm`
                         } p-3 transition-colors`}
                       >
@@ -577,6 +595,8 @@ export function TasksPageData() {
                           className={`h-4 w-4 cursor-pointer rounded ${
                             mode === "combined"
                               ? "border-[#004E89]/40 text-[#FF6B35] focus:ring-[#FF6B35]"
+                              : mode === "inattentive"
+                              ? "border-[#7C83BC]/40 text-[#665FD1] focus:ring-[#665FD1]"
                               : `${colorPalette.borderLight.replace('border-', 'border-')} ${colorPalette.accent.replace('bg-', 'text-')} focus:ring-${colorPalette.accent.replace('bg-', '')}`
                           }`}
                         />
@@ -596,7 +616,7 @@ export function TasksPageData() {
                         <button
                           onClick={() => removeTask(task.id)}
                           className={`flex-shrink-0 rounded p-1 ${
-                            mode === "combined" ? "text-[#004E89]/40" : "text-gray-400"
+                            mode === "combined" ? "text-[#004E89]/40" : mode === "inattentive" ? colorPalette.textMuted : "text-gray-400"
                           } transition-colors hover:text-red-500`}
                           aria-label="Remove task"
                         >
@@ -621,7 +641,7 @@ export function TasksPageData() {
 
               {/* Input area with Add and Break Task buttons */}
               <div className={`flex-shrink-0 border-t ${
-                mode === "combined" ? "border-[#004E89]/10" : colorPalette.border
+                mode === "combined" ? "border-[#004E89]/10" : mode === "inattentive" ? colorPalette.borderLight : colorPalette.border
               } pt-4 flex items-center gap-2`}>
                 <input
                   ref={inputRef}
@@ -638,6 +658,8 @@ export function TasksPageData() {
                   className={`flex-1 rounded-lg border ${
                     mode === "combined" 
                       ? "border-[#004E89]/20 text-[#004E89] placeholder:text-[#004E89]/40 focus:border-[#FF6B35]"
+                      : mode === "inattentive"
+                      ? `${colorPalette.border} ${colorPalette.text} placeholder:${colorPalette.textMuted}/70 focus:border-[#665FD1]`
                       : `${colorPalette.border} ${colorPalette.text} ${colorPalette.borderLight.replace('border-', 'focus:border-')}`
                   } bg-white px-3 py-2 text-sm focus:outline-none`}
                 />
@@ -653,6 +675,8 @@ export function TasksPageData() {
                   className={`rounded-lg border ${
                     mode === "combined"
                       ? "border-[#004E89]/20 text-[#004E89] hover:bg-[#F7C59F]/20"
+                      : mode === "inattentive"
+                      ? `${colorPalette.border} ${colorPalette.text} ${colorPalette.hoverBg}`
                       : `${colorPalette.borderLight} ${colorPalette.text} ${colorPalette.accentLight.replace('bg-', 'hover:bg-')}`
                   } bg-white px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
                   title={isBreaking ? "Breaking down task..." : "Break down task using AI"}

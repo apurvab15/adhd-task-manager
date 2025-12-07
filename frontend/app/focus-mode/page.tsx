@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import SimpleTaskList from "@/components/SimpleTaskList";
-import { violetPalette, periwinklePalette, combinedPalette, type ColorPalette } from "@/components/TaskListDrawer";
+import { violetPalette, periwinklePalette, combinedPalette, inattentivePalette, type ColorPalette } from "@/components/TaskListDrawer";
 import JSConfetti from "js-confetti";
 
 type Mode = "inattentive" | "hyperactive" | "combined";
@@ -33,7 +33,7 @@ export function FocusModePageData() {
     : "hyperactive";
   
   const colorPalette: ColorPalette = 
-    mode === "inattentive" ? periwinklePalette :
+    mode === "inattentive" ? inattentivePalette :
     mode === "combined" ? combinedPalette :
     violetPalette;
   
@@ -191,7 +191,7 @@ export function FocusModePageData() {
       // Trigger confetti
       if (confettiRef.current) {
         const confettiColors = mode === "inattentive" 
-          ? ['#7085FF', '#A7B8FF', '#D0D8FF', '#FFFFFF']
+          ? ['#665FD1', '#CCCCFF', '#E6E6FF', '#7C83BC', '#FFFFFF']
           : mode === "combined"
           ? ['#FF6B35', '#F7C59F', '#EFEFD0', '#004E89', '#FFFFFF']
           : ['#8B5CF6', '#A78BFA', '#C4B5FD', '#FFFFFF'];
@@ -218,19 +218,19 @@ export function FocusModePageData() {
   const backgroundClass = mode === "combined" 
     ? "bg-gradient-to-br from-[#EFEFD0] via-[#F7C59F]/20 to-[#EFEFD0]"
     : mode === "inattentive"
-    ? "bg-gradient-to-br from-slate-50 via-white to-slate-100"
+    ? `bg-gradient-to-br ${colorPalette.bg}`
     : "bg-gradient-to-br from-rose-50 via-white to-slate-100";
   
   const navBorderClass = mode === "combined"
     ? "border-[#004E89]/10"
     : mode === "inattentive"
-    ? "border-[#7085FF]/10"
+    ? colorPalette.borderLight
     : "border-violet-200/10";
   
   const navTextClass = mode === "combined"
     ? "text-[#004E89]"
     : mode === "inattentive"
-    ? "text-[#7085FF]"
+    ? colorPalette.textDark
     : colorPalette.textDark;
 
   return (
@@ -258,7 +258,7 @@ export function FocusModePageData() {
               mode === "combined"
                 ? "border-[#004E89] text-[#004E89] hover:bg-[#F7C59F]/10"
                 : mode === "inattentive"
-                ? "border-[#7085FF] text-[#7085FF] hover:bg-[#7085FF]/10"
+                ? `${colorPalette.accent.replace('bg-', 'border-')} ${colorPalette.accent.replace('bg-', 'text-')} ${colorPalette.accentLight.replace('bg-', 'hover:bg-')}`
                 : "border-violet-600 text-violet-600 hover:bg-violet-50"
             }`}
             title="Home"
@@ -304,13 +304,13 @@ export function FocusModePageData() {
                   const offset = circumference - (progressPercentage / 100) * circumference;
                   
                   const progressColor = mode === "inattentive" 
-                    ? "#7085FF"
+                    ? "#665FD1"
                     : mode === "combined"
                     ? "#FF6B35"
                     : "#8B5CF6";
                   
                   const bgColor = mode === "inattentive"
-                    ? "#7085FF"
+                    ? "#7C83BC"
                     : mode === "combined"
                     ? "#1A659E"
                     : "#C4B5FD";
