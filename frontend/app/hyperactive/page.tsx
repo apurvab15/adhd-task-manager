@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useGamification } from "@/hooks/useGamification";
 import { getProgressPercentage, awardXPForTask, revokeXPForTaskCompletion, getLevelEmoji, awardXPForBreakingTask, awardXPForFocusMode } from "@/utils/gamification";
@@ -14,29 +14,6 @@ import JSConfetti from "js-confetti";
 
 const STORAGE_KEY = "adhd-task-lists-hyperactive";
 const TODAY_TASKS_KEY = "adhd-today-tasks-hyperactive";
-
-const MOTIVATION_MESSAGES = [
-  "You're doing great! Keep it up! 💪",
-  "Every task completed is a step forward! 🚀",
-  "Progress, not perfection! ✨",
-  "You've got this! One task at a time! 🌟",
-  "Small steps lead to big achievements! 🎯",
-  "Your effort today matters! 💫",
-  "Keep going, you're making progress! 🌈",
-  "Every completed task is a win! 🏆",
-  "You're building momentum! Keep pushing! ⚡",
-  "Focus on progress, not perfection! 🌸",
-  "You're stronger than you think! 💎",
-  "One task down, you're on a roll! 🎉",
-  "Your consistency is paying off! 🌟",
-  "Every small step counts! 🦋",
-  "You're creating positive change! ✨",
-  "Keep moving forward! 🚶‍♂️",
-  "You're doing better than you think! 💪",
-  "Progress is progress, no matter how small! 🌱",
-  "You're building great habits! 🌈",
-  "Stay focused, you've got this! 🎯",
-];
 
 type Task = {
   id: number;
@@ -55,6 +32,7 @@ type TaskList = {
 export default function HyperactivePage() {
   const { stats } = useGamification();
   const progressPercentage = getProgressPercentage(stats);
+  const levelEmoji = useMemo(() => getLevelEmoji(stats.level), [stats.level]);
   const [isFocusModalOpen, setIsFocusModalOpen] = useState(false);
   const [isAddTasksModalOpen, setIsAddTasksModalOpen] = useState(false);
   const [isBreakTasksModalOpen, setIsBreakTasksModalOpen] = useState(false);
@@ -63,7 +41,6 @@ export default function HyperactivePage() {
   const [todayTasks, setTodayTasks] = useState<Task[]>([]);
   const [taskLists, setTaskLists] = useState<TaskList[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
-  const [motivationMessage, setMotivationMessage] = useState("");
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const nextTaskId = useRef(1);
@@ -94,15 +71,10 @@ export default function HyperactivePage() {
     return () => clearTimeout(timer);
   }, []);
 
-  const getRandomMessage = () => {
-    const randomIndex = Math.floor(Math.random() * MOTIVATION_MESSAGES.length);
-    return MOTIVATION_MESSAGES[randomIndex];
-  };
+
 
   // Set random motivation message on mount and when tasks are completed
   useEffect(() => {
-    setMotivationMessage(getRandomMessage());
-
     // Update message when tasks are completed
     const handleTaskCompleted = () => {
       setMotivationMessage(getRandomMessage());
@@ -576,8 +548,9 @@ export default function HyperactivePage() {
             {/* Radial Progress Bar with Emoji */}
             <div className="flex justify-center">
               <RadialProgress 
+                key={`radial-${stats.level}-${stats.totalXP}-${levelEmoji}`}
                 percentage={progressPercentage} 
-                emoji={getLevelEmoji(stats.level)}
+                emoji={levelEmoji}
                 size={180}
                 progressColor="text-[#004E89]"
                 bgColor="text-[#BFC9D4]"

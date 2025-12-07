@@ -228,10 +228,10 @@ export function awardXPForTaskListCompletion(): UserStats {
  * Get emoji based on level
  */
 export function getLevelEmoji(level: number): string {
-  if (level >= 20) return "🏆";
-  if (level >= 15) return "⭐";
-  if (level >= 10) return "🌟";
-  if (level >= 5) return "✨";
+  if (level >= 5) return "🏆";
+  if (level >= 4) return "⭐";
+  if (level >= 3) return "🌟";
+  if (level >= 2) return "✨";
   return "🎯";
 }
 

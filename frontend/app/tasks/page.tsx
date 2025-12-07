@@ -7,6 +7,7 @@ import FocusModeModal from "@/components/FocusModeModal";
 import BreakTasksModal from "@/components/BreakTasksModal";
 import { violetPalette, periwinklePalette, combinedPalette, inattentivePalette, hyperactivePalette, type ColorPalette } from "@/components/TaskListDrawer";
 import { useTaskBreaker } from "@/hooks/useTaseBreaking";
+import { awardXPForTask, revokeXPForTaskCompletion } from "@/utils/gamification";
 
 type Mode = "inattentive" | "hyperactive" | "combined";
 
@@ -57,6 +58,8 @@ export function TasksPageData() {
   const titleInputRef = useRef<HTMLInputElement | null>(null);
   const nextTaskId = useRef(1);
   const nextListId = useRef(1);
+  const isUpdatingFromExternal = useRef(false);
+  const taskListsRef = useRef<TaskList[]>([]);
   const { breakTask, isBreaking } = useTaskBreaker(mode);
 
   const getStorageKey = () => {
@@ -122,9 +125,19 @@ export function TasksPageData() {
     setIsHydrated(true);
   }, [mode]);
 
+  // Update ref whenever taskLists changes
+  useEffect(() => {
+    taskListsRef.current = taskLists;
+  }, [taskLists]);
+
   // Save task lists to localStorage
   useEffect(() => {
     if (!isHydrated || typeof window === "undefined") return;
+    // Skip if we're updating from external source to prevent infinite loop
+    if (isUpdatingFromExternal.current) {
+      isUpdatingFromExternal.current = false;
+      return;
+    }
     const storageKey = getStorageKey();
     window.localStorage.setItem(storageKey, JSON.stringify(taskLists));
     // Dispatch event to notify other pages of changes
@@ -141,7 +154,16 @@ export function TasksPageData() {
         const saved = window.localStorage.getItem(storageKey);
         if (saved) {
           const parsed = JSON.parse(saved) as TaskList[];
+          // Check if data actually changed to prevent unnecessary updates
+          // Use ref to get current value without adding to dependencies
+          const currentData = JSON.stringify(taskListsRef.current);
+          const newData = JSON.stringify(parsed);
+          if (currentData === newData) {
+            return; // No change, skip update
+          }
+          
           if (parsed.length > 0) {
+            isUpdatingFromExternal.current = true; // Mark as external update
             setTaskLists(parsed);
             // Update currentListId if needed
             if (!currentListId || !parsed.some((list) => list.id === currentListId)) {
@@ -295,25 +317,114 @@ export function TasksPageData() {
 
   const toggleDone = (taskId: number) => {
     if (!currentListId) return;
-    setTaskLists((lists) =>
-      lists.map((list) =>
+    setTaskLists((lists) => {
+      const currentList = lists.find((list) => list.id === currentListId);
+      const task = currentList?.tasks.find((t) => t.id === taskId);
+      
+      if (!task || typeof window === "undefined") {
+        return lists.map((list) =>
+          list.id === currentListId
+            ? {
+                ...list,
+                tasks: (() => {
+                  const updatedTasks = list.tasks.map((t) =>
+                    t.id === taskId ? { ...t, done: !t.done } : t
+                  );
+                  const incomplete = updatedTasks.filter((t) => !t.done);
+                  const completed = updatedTasks.filter((t) => t.done);
+                  return [...incomplete, ...completed];
+                })(),
+              }
+            : list
+        );
+      }
+
+      const newDone = !task.done;
+
+      // Sync with today's tasks
+      try {
+        const todayTasksKey = 
+          mode === "inattentive" ? "adhd-today-tasks-inattentive" :
+          mode === "combined" ? "adhd-today-tasks-combined" :
+          "adhd-today-tasks-hyperactive";
+        
+        const savedTodayTasks = window.localStorage.getItem(todayTasksKey);
+        if (savedTodayTasks) {
+          const parsed = JSON.parse(savedTodayTasks);
+          const today = new Date().toDateString();
+          if (parsed.date === today) {
+            const todayTasks = parsed.tasks || [];
+            const todayTaskIndex = todayTasks.findIndex((t: { id: number }) => t.id === taskId);
+            
+            if (todayTaskIndex !== -1) {
+              // Task exists in today's list, update it
+              todayTasks[todayTaskIndex] = { ...todayTasks[todayTaskIndex], done: newDone };
+              window.localStorage.setItem(
+                todayTasksKey,
+                JSON.stringify({ date: today, tasks: todayTasks })
+              );
+              window.dispatchEvent(new CustomEvent("todayTasksUpdated"));
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error syncing with today's tasks:", error);
+      }
+
+      // Sync with focus mode (update completedTaskIds in focus mode storage)
+      try {
+        const focusModeTasksKey = "adhd-focus-mode-tasks";
+        const savedFocusTasks = window.localStorage.getItem(focusModeTasksKey);
+        if (savedFocusTasks) {
+          const focusTasks = JSON.parse(savedFocusTasks) as Array<{ id: number; text: string }>;
+          const focusTask = focusTasks.find((t) => t.id === taskId);
+          if (focusTask) {
+            // Task exists in focus mode, but focus mode doesn't store done status
+            // Instead, we need to update the completedTaskIds in focus mode
+            // Since focus mode uses a Set, we can't directly update it from here
+            // But we dispatch an event that focus mode can listen to
+            window.dispatchEvent(new CustomEvent("focusModeTaskToggled", { 
+              detail: { taskId, done: newDone } 
+            }));
+          }
+        }
+      } catch (error) {
+        console.error("Error syncing with focus mode:", error);
+      }
+
+      // Handle gamification for hyperactive mode
+      if (mode === "hyperactive") {
+        if (newDone && !task.done) {
+          // Marking as done – award XP
+          awardXPForTask();
+        } else if (!newDone && task.done) {
+          // Unchecking a completed task – revoke XP
+          revokeXPForTaskCompletion();
+        }
+        window.dispatchEvent(new CustomEvent("taskCompleted"));
+      }
+
+      const updatedLists = lists.map((list) =>
         list.id === currentListId
           ? {
               ...list,
               tasks: (() => {
-                // Update task done status
                 const updatedTasks = list.tasks.map((t) =>
-                  t.id === taskId ? { ...t, done: !t.done } : t
+                  t.id === taskId ? { ...t, done: newDone } : t
                 );
-                // Reorder: incomplete tasks first, then completed tasks
                 const incomplete = updatedTasks.filter((t) => !t.done);
                 const completed = updatedTasks.filter((t) => t.done);
                 return [...incomplete, ...completed];
               })(),
             }
           : list
-      )
-    );
+      );
+
+      // Dispatch event to notify other pages of the task list update
+      window.dispatchEvent(new CustomEvent("taskListUpdated"));
+
+      return updatedLists;
+    });
   };
 
   const removeTask = (taskId: number) => {

@@ -165,6 +165,32 @@ export function FocusModePageData() {
     }
   }, []);
 
+  // Listen for task toggle events from task manager
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleFocusModeTaskToggle = (event: Event) => {
+      const customEvent = event as CustomEvent<{ taskId: number; done: boolean }>;
+      const { taskId, done } = customEvent.detail;
+      
+      setCompletedTaskIds((prev) => {
+        const newSet = new Set(prev);
+        if (done) {
+          newSet.add(taskId);
+        } else {
+          newSet.delete(taskId);
+        }
+        return newSet;
+      });
+    };
+
+    window.addEventListener("focusModeTaskToggled", handleFocusModeTaskToggle as EventListener);
+    
+    return () => {
+      window.removeEventListener("focusModeTaskToggled", handleFocusModeTaskToggle as EventListener);
+    };
+  }, []);
+
   // Track completed tasks and sync with task manager and today's tasks
   const handleTaskToggle = (taskId: string | number, isChecked: boolean) => {
     const id = typeof taskId === 'string' ? parseInt(taskId, 10) : taskId;
@@ -357,7 +383,7 @@ export function FocusModePageData() {
       </nav>
 
       {/* Main Content - 2 Column Layout */}
-      <main className="flex-1 flex gap-4 p-4 pt-6 overflow-hidden min-h-0">
+      <main className="flex-1 flex gap-4 p-4 pt-8 overflow-hidden min-h-0">
         {/* Left Column - Timer (with card, vertically centered) */}
         <div className="w-1/2 flex flex-col">
           <div className={`flex-1 rounded-2xl border ${colorPalette.borderLight} bg-white/90 p-6 shadow-lg flex items-center justify-center`}>

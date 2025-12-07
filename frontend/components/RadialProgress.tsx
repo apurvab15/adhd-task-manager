@@ -53,7 +53,11 @@ export default function RadialProgress({
         />
       </svg>
       {/* Emoji in center */}
-      <div className="absolute inset-0 flex items-center justify-center" style={{ fontSize: `${size * 0.35}px` }}>
+      <div 
+        key={emoji}
+        className="absolute inset-0 flex items-center justify-center" 
+        style={{ fontSize: `${size * 0.35}px` }}
+      >
         {emoji}
       </div>
     </div>
