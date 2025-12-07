@@ -80,9 +80,12 @@ export default function TaskBoard({
         <button
           type="submit"
           style={{ backgroundColor: accentColor }}
-          className="rounded-2xl px-6 py-3 text-sm font-semibold uppercase tracking-wide text-white transition hover:brightness-110"
+          className="rounded-2xl px-6 py-3 text-sm font-semibold uppercase tracking-wide text-white transition hover:brightness-110 flex items-center justify-center"
+          title="Add Task"
         >
-          Add Task
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+            <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+          </svg>
         </button>
       </form>
 

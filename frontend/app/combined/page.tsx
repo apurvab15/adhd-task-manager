@@ -16,6 +16,8 @@ type Task = {
   id: number;
   text: string;
   done: boolean;
+  sourceListId?: number;
+  sourceListName?: string;
 };
 
 type TaskList = {
@@ -570,6 +572,9 @@ export default function CombinedPage() {
                         >
                           {task.text}
                         </p>
+                        {task.sourceListName && (
+                          <p className="mt-1 text-xs text-[#004E89]/60">from {task.sourceListName}</p>
+                        )}
                       </div>
                       <button
                       onClick={() => handleRemoveTodayTask(task.id)}
@@ -604,7 +609,9 @@ export default function CombinedPage() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
-                    addTask(input);
+                    if (input.trim()) {
+                      addTask(input);
+                    }
                   }
                 }}
                 rows={2}
@@ -614,9 +621,12 @@ export default function CombinedPage() {
               <div className="flex flex-col gap-2">
                 <button
                   onClick={() => addTask(input)}
-                  className={`rounded-lg ${colorPalette.accent} px-4 py-2 text-base font-medium text-white transition ${colorPalette.accentHover}`}
+                  className={`rounded-lg ${colorPalette.accent} px-4 py-2 text-base font-medium text-white transition ${colorPalette.accentHover} flex items-center justify-center`}
+                  title="Add task"
                 >
-                  Add
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+                    <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+                  </svg>
                 </button>
                 <button
                   onClick={() => handleBreakTasks(input)} 
@@ -634,31 +644,38 @@ export default function CombinedPage() {
 
             {/* Right Column - Next Step (50%) */}
             <div className="w-1/2 rounded-2xl border-2 border-[#004E89]/20 bg-white p-12 flex flex-col min-h-0">
-              <h2 className="text-4xl font-bold text-[#004E89] mb-8">Next Step</h2>
+              <h2 className="text-4xl font-bold text-[#004E89] mb-8 flex-shrink-0">Next Step</h2>
 
-              {nextTask ? (
-                <div className="space-y-6">
-                  <div className="flex items-start gap-6">
-                    <input
-                      type="checkbox"
-                      checked={nextTask.done}
-                      onChange={() => handleTodayTaskToggle(nextTask.id)}
-                      className="h-8 w-8 cursor-pointer rounded border-2 border-[#004E89]/60 bg-white text-[#004E89] focus:ring-2 focus:ring-[#004E89]/30 focus:border-[#004E89] checked:bg-[#004E89] checked:border-[#004E89] mt-1 transition-colors"
-                    />
-                    <p className="text-4xl font-medium text-[#004E89] leading-relaxed flex-1">
-                      {nextTask.text}
+              <div className="flex-1 overflow-y-auto min-h-0">
+                {nextTask ? (
+                  <div className="space-y-6">
+                    <div className="flex items-start gap-6">
+                      <input
+                        type="checkbox"
+                        checked={nextTask.done}
+                        onChange={() => handleTodayTaskToggle(nextTask.id)}
+                        className="h-8 w-8 cursor-pointer rounded border-2 border-[#004E89]/60 bg-white text-[#004E89] focus:ring-2 focus:ring-[#004E89]/30 focus:border-[#004E89] checked:bg-[#004E89] checked:border-[#004E89] mt-1 transition-colors flex-shrink-0"
+                      />
+                      <div className="flex-1 break-words">
+                        <p className="text-4xl font-medium text-[#004E89] leading-relaxed">
+                          {nextTask.text}
+                        </p>
+                        {nextTask.sourceListName && (
+                          <p className="mt-1 text-xs text-[#004E89]/60">from {nextTask.sourceListName}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <p className="text-4xl font-medium text-[#004E89]/60 leading-relaxed">
+                      {todayTasks.length === 0 
+                        ? "Let's get started!" 
+                        : "All tasks completed! 🎉"}
                     </p>
-                </div>
+                  </div>
+                )}
               </div>
-              ) : (
-                <div className="space-y-6">
-                  <p className="text-4xl font-medium text-[#004E89]/60 leading-relaxed">
-                    {todayTasks.length === 0 
-                      ? "Let's get started!" 
-                      : "All tasks completed! 🎉"}
-                  </p>
-                </div>
-              )}
             </div>
           </>
         ) : (
@@ -697,6 +714,9 @@ export default function CombinedPage() {
                         >
                           {task.text}
                         </p>
+                        {task.sourceListName && (
+                          <p className="mt-1 text-xs text-[#004E89]/60">from {task.sourceListName}</p>
+                        )}
                       </div>
                       <button
                           onClick={() => handleRemoveTodayTask(task.id)}
@@ -741,9 +761,12 @@ export default function CombinedPage() {
                 <div className="flex flex-col gap-2">
                   <button
                     onClick={() => addTask(input)}
-                    className={`rounded-lg ${colorPalette.accent} px-4 py-2 text-base font-medium text-white transition ${colorPalette.accentHover}`}
+                    className={`rounded-lg ${colorPalette.accent} px-4 py-2 text-base font-medium text-white transition ${colorPalette.accentHover} flex items-center justify-center`}
+                    title="Add task"
                   >
-                    Add
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+                      <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+                    </svg>
                   </button>
                   <button
                     onClick={() => handleBreakTasks(input)}
@@ -887,13 +910,13 @@ export default function CombinedPage() {
       )}
       </main>
 
-      <FocusModeModal isOpen={isFocusModalOpen} onClose={() => setIsFocusModalOpen(false)} mode="combined" />
+      <FocusModeModal isOpen={isFocusModalOpen} onClose={() => setIsFocusModalOpen(false)} mode="combined" combinedMode={mode} />
       <AddTasksModal
         isOpen={isAddTasksModalOpen}
         onClose={() => setIsAddTasksModalOpen(false)}
         onAddTasks={handleAddTasks}
         existingTaskIds={existingTaskIds}
-        mode="hyperactive"
+        mode="combined"
         key={isAddTasksModalOpen ? "open" : "closed"}
       />
       <BreakTasksModal

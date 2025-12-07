@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { violetPalette, skyPalette, periwinklePalette, hyperactivePalette, type ColorPalette } from "./TaskListDrawer";
+import { violetPalette, skyPalette, periwinklePalette, hyperactivePalette, combinedPalette, type ColorPalette } from "./TaskListDrawer";
 
 type Task = {
   id: number;
@@ -20,15 +20,20 @@ type AddTasksModalProps = {
   onClose: () => void;
   onAddTasks: (tasks: Array<{ id: number; text: string; done: boolean; sourceListId?: number; sourceListName?: string }>) => void;
   existingTaskIds: Set<number>;
-  mode?: "inattentive" | "hyperactive";
+  mode?: "inattentive" | "hyperactive" | "combined";
 };
 
-const getStorageKey = (mode: "inattentive" | "hyperactive") => {
-  return mode === "inattentive" ? "adhd-task-lists-inattentive" : "adhd-task-lists-hyperactive";
+const getStorageKey = (mode: "inattentive" | "hyperactive" | "combined") => {
+  if (mode === "inattentive") return "adhd-task-lists-inattentive";
+  if (mode === "combined") return "adhd-task-lists-combined";
+  return "adhd-task-lists-hyperactive";
 };
 
 export default function AddTasksModal({ isOpen, onClose, onAddTasks, existingTaskIds, mode = "hyperactive" }: AddTasksModalProps) {
-  const colorPalette: ColorPalette = mode === "inattentive" ? periwinklePalette : hyperactivePalette;
+  const colorPalette: ColorPalette = 
+    mode === "inattentive" ? periwinklePalette :
+    mode === "combined" ? combinedPalette :
+    hyperactivePalette;
   const [allTasks, setAllTasks] = useState<Array<{ task: Task; listName: string; listId: number }>>([]);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<number>>(new Set());
 
@@ -183,9 +188,12 @@ export default function AddTasksModal({ isOpen, onClose, onAddTasks, existingTas
             <button
               onClick={handleAdd}
               disabled={selectedTaskIds.size === 0}
-              className={`rounded-xl ${colorPalette.accent} px-4 py-2 text-sm font-semibold text-white transition-colors ${colorPalette.accentHover} disabled:opacity-50 disabled:cursor-not-allowed`}
+              className={`rounded-xl ${colorPalette.accent} px-4 py-2 text-sm font-semibold text-white transition-colors ${colorPalette.accentHover} disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center`}
+              title="Add Tasks"
             >
-              Add Tasks
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+                <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+              </svg>
             </button>
           </div>
         </div>

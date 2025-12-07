@@ -21,6 +21,7 @@ type FocusModeModalProps = {
   isOpen: boolean;
   onClose: () => void;
   mode?: "inattentive" | "hyperactive" | "combined";
+  combinedMode?: "chaos" | "calm";
 };
 
 const getStorageKey = (mode: "inattentive" | "hyperactive" | "combined") => {
@@ -32,7 +33,7 @@ const getStorageKey = (mode: "inattentive" | "hyperactive" | "combined") => {
 const FOCUS_MODE_STORAGE_KEY = "adhd-focus-mode-tasks";
 const FOCUS_MODE_TIMER_KEY = "adhd-focus-mode-timer";
 
-export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }: FocusModeModalProps) {
+export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive", combinedMode = "chaos" }: FocusModeModalProps) {
   const router = useRouter();
   const colorPalette: ColorPalette = 
     mode === "inattentive" ? inattentivePalette :
@@ -40,7 +41,25 @@ export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }
     hyperactivePalette;
   const [allTasks, setAllTasks] = useState<Array<{ task: Task; listName: string }>>([]);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<number>>(new Set());
-  const [timerMinutes, setTimerMinutes] = useState(25);
+  
+  // Calculate default timer minutes based on mode
+  const getDefaultTimerMinutes = () => {
+    if (mode === "hyperactive") return 15;
+    if (mode === "combined") {
+      return combinedMode === "chaos" ? 15 : 25;
+    }
+    return 25;
+  };
+  
+  const [timerMinutes, setTimerMinutes] = useState(getDefaultTimerMinutes());
+
+  // Reset timer to mode-specific default when modal opens or mode changes
+  useEffect(() => {
+    if (isOpen) {
+      const defaultMinutes = getDefaultTimerMinutes();
+      setTimerMinutes(defaultMinutes);
+    }
+  }, [isOpen, mode, combinedMode]);
 
   // Load all unticked tasks from all lists
   useEffect(() => {
@@ -168,8 +187,9 @@ export default function FocusModeModal({ isOpen, onClose, mode = "hyperactive" }
                 }}
                 onBlur={(e) => {
                   const value = parseInt(e.target.value);
+                  const defaultMinutes = mode === "hyperactive" ? 15 : mode === "combined" ? (combinedMode === "chaos" ? 15 : 25) : 25;
                   if (isNaN(value) || value < 1) {
-                    setTimerMinutes(25);
+                    setTimerMinutes(defaultMinutes);
                   } else if (value > 120) {
                     setTimerMinutes(120);
                   }
