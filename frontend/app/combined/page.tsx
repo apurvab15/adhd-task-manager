@@ -47,7 +47,7 @@ export default function CombinedPage() {
   const [brokenTasks, setBrokenTasks] = useState<string[]>([]);
   const [originalTaskText, setOriginalTaskText] = useState<string>("");
   const [mode, setMode] = useState<"calm" | "chaos">("chaos");
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const nextTaskId = useRef(1);
   const nextListId = useRef(1);
   const confettiRef = useRef<JSConfetti | null>(null);
@@ -207,15 +207,25 @@ export default function CombinedPage() {
     const t = text.trim();
     if (!t) return;
 
-    // Add to Today's List
-    const newTask: Task = { id: nextTaskId.current++, text: t, done: false };
+    const newListIdValue = nextListId.current++;
+    const newTaskId = nextTaskId.current++;
+    const listName = t.slice(0, 30) + (t.length > 30 ? "..." : "");
+
+    // Add to Today's List with sourceListName
+    const newTask: Task = { 
+      id: newTaskId, 
+      text: t, 
+      done: false,
+      sourceListId: newListIdValue,
+      sourceListName: listName
+    };
     setTodayTasks((prev) => [...prev, newTask]);
 
     // Create a new task list in task manager with this single task
     const newList: TaskList = {
-      id: nextListId.current++,
-      name: t,
-      tasks: [{ id: newTask.id, text: t, done: false }],
+      id: newListIdValue,
+      name: listName,
+      tasks: [{ id: newTaskId, text: t, done: false }],
       status: "todo",
     };
 
@@ -260,6 +270,10 @@ export default function CombinedPage() {
     const validTasks = brokenTasksList.filter((t) => t.text.trim() !== "");
     if (validTasks.length === 0) return;
 
+    // Create a new task list in task manager with the broken tasks
+    const newListName = originalTaskText.slice(0, 30) + (originalTaskText.length > 30 ? "..." : "");
+    const newListId = nextListId.current++;
+    
     // Generate unique IDs for tasks
     const tasksWithIds = validTasks.map((task) => ({
       id: nextTaskId.current++,
@@ -267,24 +281,24 @@ export default function CombinedPage() {
       done: false,
     }));
 
-    // Add to Today's List
-    const todayTasksToAdd: Task[] = tasksWithIds.map((task) => ({
-      id: task.id,
-      text: task.text,
-      done: false,
-    }));
-    setTodayTasks((prev) => [...prev, ...todayTasksToAdd]);
-
-    // Create a new task list in task manager with the broken tasks
-    const newListName = originalTaskText.slice(0, 30) + (originalTaskText.length > 30 ? "..." : "");
     const newList: TaskList = {
-      id: nextListId.current++,
+      id: newListId,
       name: newListName,
       tasks: tasksWithIds,
       status: "todo",
     };
 
     setTaskLists((prev) => [...prev, newList]);
+
+    // Add to Today's List with sourceListName and sourceListId
+    const todayTasksToAdd: Task[] = tasksWithIds.map((task) => ({
+      id: task.id,
+      text: task.text,
+      done: false,
+      sourceListId: newListId,
+      sourceListName: newListName,
+    }));
+    setTodayTasks((prev) => [...prev, ...todayTasksToAdd]);
 
     // Clean up
     setBrokenTasks([]);
@@ -552,51 +566,82 @@ export default function CombinedPage() {
                   </p>
                 </div>
               ) : (
-              <ul className="space-y-2">
-                  {todayTasks.map((task) => (
-                    <li
-                      key={task.id}
-                    className="flex items-center gap-3 rounded-xl border border-[#004E89]/20 bg-white p-3 transition-colors hover:bg-[#F7C59F]/10"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={task.done}
-                      onChange={() => handleTodayTaskToggle(task.id)}
-                      className="h-4 w-4 cursor-pointer rounded border-[#004E89]/40 text-[#FF6B35] focus:ring-[#FF6B35]"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p
-                        className={`text-sm break-words ${
-                          task.done ? "line-through text-[#004E89]/40" : "text-[#004E89]"
-                          }`}
-                        >
-                          {task.text}
-                        </p>
-                        {task.sourceListName && (
-                          <p className="mt-1 text-xs text-[#004E89]/60">from {task.sourceListName}</p>
-                        )}
+                <div className="space-y-4">
+                  {(() => {
+                    // Helper to get tasklist name
+                    const getTaskListName = (task: Task): string | undefined => {
+                      if (task.sourceListName) return task.sourceListName;
+                      if (task.sourceListId) {
+                        const list = taskLists.find(l => l.id === task.sourceListId);
+                        return list?.name;
+                      }
+                      return undefined;
+                    };
+
+                    // Group tasks by tasklist name
+                    const groupedTasks = todayTasks.reduce((acc, task) => {
+                      const listName = getTaskListName(task) || 'Other';
+                      if (!acc[listName]) {
+                        acc[listName] = [];
+                      }
+                      acc[listName].push(task);
+                      return acc;
+                    }, {} as Record<string, Task[]>);
+
+                    return Object.entries(groupedTasks).map(([listName, tasks]) => (
+                      <div key={listName} className="space-y-2">
+                        <ul className="space-y-2">
+                          {tasks.map((task) => {
+                            const taskListName = getTaskListName(task);
+                            return (
+                            <li
+                              key={task.id}
+                              className="flex items-center gap-3 rounded-xl border border-[#004E89]/20 bg-white p-3 transition-colors hover:bg-[#F7C59F]/10"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={task.done}
+                                onChange={() => handleTodayTaskToggle(task.id)}
+                                className="h-4 w-4 cursor-pointer rounded border-[#004E89]/40 text-[#FF6B35] focus:ring-[#FF6B35]"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p
+                                  className={`text-sm break-words ${
+                                    task.done ? "line-through text-[#004E89]/40" : "text-[#004E89]"
+                                  }`}
+                                >
+                                  {task.text}
+                                </p>
+                                {taskListName && (
+                                  <p className="mt-1 text-xs text-[#004E89]/60">from {taskListName}</p>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => handleRemoveTodayTask(task.id)}
+                                className="flex-shrink-0 rounded p-1 text-[#004E89]/40 transition-colors hover:text-red-500"
+                                aria-label="Remove task"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  viewBox="0 0 20 20"
+                                  fill="currentColor"
+                                  className="h-4 w-4"
+                                >
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                              </button>
+                            </li>
+                            );
+                          })}
+                        </ul>
                       </div>
-                      <button
-                      onClick={() => handleRemoveTodayTask(task.id)}
-                      className="flex-shrink-0 rounded p-1 text-[#004E89]/40 transition-colors hover:text-red-500"
-                        aria-label="Remove task"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        className="h-4 w-4"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                    ));
+                  })()}
+                </div>
               )}
             </div>
 
@@ -694,51 +739,82 @@ export default function CombinedPage() {
                   </p>
                 </div>
               ) : (
-                <ul className="space-y-2">
-                  {todayTasks.map((task) => (
-                    <li
-                      key={task.id}
-                        className="flex items-center gap-3 rounded-xl border border-[#004E89]/20 bg-white p-3 transition-colors hover:bg-[#F7C59F]/10"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={task.done}
-                          onChange={() => handleTodayTaskToggle(task.id)}
-                          className="h-4 w-4 cursor-pointer rounded border-[#004E89]/40 text-[#FF6B35] focus:ring-[#FF6B35]"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p
-                          className={`text-sm break-words ${
-                              task.done ? "line-through text-[#004E89]/40" : "text-[#004E89]"
-                          }`}
-                        >
-                          {task.text}
-                        </p>
-                        {task.sourceListName && (
-                          <p className="mt-1 text-xs text-[#004E89]/60">from {task.sourceListName}</p>
-                        )}
+                <div className="space-y-4">
+                  {(() => {
+                    // Helper to get tasklist name
+                    const getTaskListName = (task: Task): string | undefined => {
+                      if (task.sourceListName) return task.sourceListName;
+                      if (task.sourceListId) {
+                        const list = taskLists.find(l => l.id === task.sourceListId);
+                        return list?.name;
+                      }
+                      return undefined;
+                    };
+
+                    // Group tasks by tasklist name
+                    const groupedTasks = todayTasks.reduce((acc, task) => {
+                      const listName = getTaskListName(task) || 'Other';
+                      if (!acc[listName]) {
+                        acc[listName] = [];
+                      }
+                      acc[listName].push(task);
+                      return acc;
+                    }, {} as Record<string, Task[]>);
+
+                    return Object.entries(groupedTasks).map(([listName, tasks]) => (
+                      <div key={listName} className="space-y-2">
+                        <ul className="space-y-2">
+                          {tasks.map((task) => {
+                            const taskListName = getTaskListName(task);
+                            return (
+                            <li
+                              key={task.id}
+                              className="flex items-center gap-3 rounded-xl border border-[#004E89]/20 bg-white p-3 transition-colors hover:bg-[#F7C59F]/10"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={task.done}
+                                onChange={() => handleTodayTaskToggle(task.id)}
+                                className="h-4 w-4 cursor-pointer rounded border-[#004E89]/40 text-[#FF6B35] focus:ring-[#FF6B35]"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p
+                                  className={`text-sm break-words ${
+                                    task.done ? "line-through text-[#004E89]/40" : "text-[#004E89]"
+                                  }`}
+                                >
+                                  {task.text}
+                                </p>
+                                {taskListName && (
+                                  <p className="mt-1 text-xs text-[#004E89]/60">from {taskListName}</p>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => handleRemoveTodayTask(task.id)}
+                                className="flex-shrink-0 rounded p-1 text-[#004E89]/40 transition-colors hover:text-red-500"
+                                aria-label="Remove task"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  viewBox="0 0 20 20"
+                                  fill="currentColor"
+                                  className="h-4 w-4"
+                                >
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                              </button>
+                            </li>
+                            );
+                          })}
+                        </ul>
                       </div>
-                      <button
-                          onClick={() => handleRemoveTodayTask(task.id)}
-                          className="flex-shrink-0 rounded p-1 text-[#004E89]/40 transition-colors hover:text-red-500"
-                        aria-label="Remove task"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                          className="h-4 w-4"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                    ));
+                  })()}
+                </div>
               )}
             </div>
 

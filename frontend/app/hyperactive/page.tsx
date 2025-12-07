@@ -73,23 +73,6 @@ export default function HyperactivePage() {
 
 
 
-  // Set random motivation message on mount and when tasks are completed
-  useEffect(() => {
-    // Update message when tasks are completed
-    const handleTaskCompleted = () => {
-      setMotivationMessage(getRandomMessage());
-    };
-
-    window.addEventListener("taskCompleted", handleTaskCompleted);
-    return () => {
-      window.removeEventListener("taskCompleted", handleTaskCompleted);
-    };
-  }, []);
-
-  const handleNewMessage = () => {
-    setMotivationMessage(getRandomMessage());
-  };
-
   // Load today's tasks and task lists from localStorage
   useEffect(() => {
     if (typeof window === "undefined") return;
