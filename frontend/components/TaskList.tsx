@@ -22,7 +22,7 @@ type Mode = "inattentive" | "hyperactive" | "combined";
 
 type TaskListWindowProps = {
     mode?: Mode;
-    effectivePalette?: ColorPalette;
+    colorPalette?: ColorPalette;
 };
 
 const getStorageKey = (mode: Mode) => {
