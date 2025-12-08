@@ -54,7 +54,8 @@ export function TasksPageData() {
   const [brokenTasks, setBrokenTasks] = useState<string[]>([]);
   const [originalTaskText, setOriginalTaskText] = useState<string>("");
   
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  // Input is a textarea (multi-line), so use the matching ref type
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const titleInputRef = useRef<HTMLInputElement | null>(null);
   const nextTaskId = useRef(1);
   const nextListId = useRef(1);

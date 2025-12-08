@@ -480,7 +480,10 @@ function QuestionField({
 }) {
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium text-indigo-900 mb-2">
+  <label
+    htmlFor={id}
+    className="block text-lg font-semibold text-indigo-900 mb-3 leading-snug"
+  >
         {number}. {label} <span className="text-indigo-600">*</span>
       </label>
       <select
@@ -522,7 +525,7 @@ function RadioField({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-indigo-900 mb-3">
+      <label className="block text-lg font-semibold text-indigo-900 mb-3 leading-snug">
         {number}. {label} <span className="text-indigo-600">*</span>
       </label>
       <div className="space-y-2">
