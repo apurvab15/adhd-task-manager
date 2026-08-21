@@ -6,8 +6,8 @@ Take a short quiz to get a type, or skip the quiz and hop between the three expe
 
 ## How to try it
 
-1. **Find what ADHD type you are** — a short assessment classifies you as inattentive, hyperactive-impulsive, or combined, then opens the matching UI.
-2. **Experiment** — pick a type yourself and switch between them from the nav.
+1. **Find what ADHD type you are** : a short assessment classifies you as inattentive, hyperactive-impulsive, or combined, then opens the matching UI.
+2. **Experiment** : pick a type yourself and switch between them from the nav.
 
 ## Screenshots
 
