@@ -1,23 +1,39 @@
-# adhd-task-manager
+# ADHD Task Manager
 
-Google form for inferring subtype: https://forms.gle/yoQKsMZj8q2wUzUz6 
+A task manager with **three UI personalities**, each tuned to a different ADHD presentation: calm and focused, high-energy and gamified, or a mix of both.
 
-## Deployment
+Take a short quiz to get a type, or skip the quiz and hop between the three experiences.
 
-This project is configured for deployment on Vercel. See [VERCEL_DEPLOYMENT.md](./VERCEL_DEPLOYMENT.md) for detailed deployment instructions.
+## How to try it
 
-### Quick Deploy to Vercel
+1. **Find what ADHD type you are** — a short assessment classifies you as inattentive, hyperactive-impulsive, or combined, then opens the matching UI.
+2. **Experiment** — pick a type yourself and switch between them from the nav.
 
-1. Push your code to GitHub/GitLab/Bitbucket
-2. Import the repository in [Vercel Dashboard](https://vercel.com/dashboard)
-3. Set the **Root Directory** to `frontend` in project settings
-4. Set the **Root Directory** to `frontend` in Vercel project settings (in the dashboard, not in vercel.json)
-5. Add environment variable `GOOGLE_API_KEY` in Vercel project settings
-6. Deploy!
+## Screenshots
 
-Your app will be live at `https://your-project-name.vercel.app`
+### Inattentive — Calm Organizer
+![Inattentive type UI](docs/screenshots/inattentive.png)
 
-## Local Development
+### Hyperactive — Energetic Hustler
+![Hyperactive type UI](docs/screenshots/hyperactive.png)
+
+### Combined — Dynamic Worker
+![Combined type UI](docs/screenshots/combined.png)
+
+### Focus mode
+![Focus mode](docs/screenshots/focus_mode.png)
+
+## Types
+
+| Type | Persona | What you get |
+| --- | --- | --- |
+| Inattentive | Calm Organizer | One next step at a time, low visual noise |
+| Hyperactive-impulsive | Energetic Hustler | XP, levels, and a higher-energy layout |
+| Combined | Dynamic Worker | Chaos/Calm toggle — kanban or a single focus |
+
+Each type keeps its own task lists in the browser. Switch anytime from the type switcher in the nav.
+
+## Run locally
 
 ```bash
 cd frontend
@@ -26,6 +42,13 @@ npm run dev
 ```
 
 Create a `frontend/.env.local` file with:
+
 ```
 GOOGLE_API_KEY=your_api_key_here
 ```
+
+The quiz uses Gemini to classify responses. Experiment mode does not need an API key.
+
+## Deploy
+
+Configured for [Vercel](./VERCEL_DEPLOYMENT.md). Set the **Root Directory** to `frontend` and add `GOOGLE_API_KEY` in project settings.

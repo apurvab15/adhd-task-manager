@@ -8,6 +8,7 @@ import FocusModeModal from "@/components/FocusModeModal";
 import AddTasksModal from "@/components/AddTasksModal";
 import BreakTasksModal from "@/components/BreakTasksModal";
 import { inattentivePalette, type ColorPalette } from "@/components/TaskListDrawer";
+import TypeSwitcher from "@/components/TypeSwitcher";
 import JSConfetti from "js-confetti";
 
 const STORAGE_KEY = "adhd-task-lists-inattentive";
@@ -342,7 +343,11 @@ export default function InattentivePage() {
       {/* Navigation Bar */}
       <nav className={`flex-shrink-0 border-b ${colorPalette.borderLight} bg-white/90 backdrop-blur-sm`}>
         <div className="flex items-center gap-4 px-4 py-3">
-          <Link href="/inattentive" className={`flex items-center gap-2 ${colorPalette.textDark} transition-colors hover:${colorPalette.textDark.replace('text-', 'text-')}`}>
+          <Link
+            href="/"
+            title="Home"
+            className={`flex items-center gap-2 ${colorPalette.textDark} transition-colors hover:${colorPalette.textDark.replace('text-', 'text-')}`}
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
@@ -374,6 +379,7 @@ export default function InattentivePage() {
             )}
           </div>
           <div className="flex items-center gap-3">
+            <TypeSwitcher current="inattentive" />
             <Link
               href="/tasks?mode=inattentive"
               className={`flex items-center justify-center rounded-lg p-2 bg-white border-2 ${colorPalette.accent.replace('bg-', 'border-')} ${colorPalette.text} transition-colors ${colorPalette.hoverBg.replace('hover:bg-', 'hover:bg-')}`}

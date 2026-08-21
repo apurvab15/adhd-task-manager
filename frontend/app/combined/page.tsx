@@ -7,6 +7,7 @@ import FocusModeModal from "@/components/FocusModeModal";
 import AddTasksModal from "@/components/AddTasksModal";
 import BreakTasksModal from "@/components/BreakTasksModal";
 import { combinedPalette, type ColorPalette } from "@/components/TaskListDrawer";
+import TypeSwitcher from "@/components/TypeSwitcher";
 import JSConfetti from "js-confetti";
 
 const STORAGE_KEY = "adhd-task-lists-combined";
@@ -469,7 +470,7 @@ export default function CombinedPage() {
       {/* Navigation Bar */}
       <nav className="flex-shrink-0 border-b border-[#004E89]/10 bg-white/90 backdrop-blur-sm">
         <div className="flex items-center gap-4 px-4 py-3">
-          <Link href="/combined" className="flex items-center gap-2 text-[#004E89] transition-colors hover:text-[#1A659E]">
+          <Link href="/" title="Home" className="flex items-center gap-2 text-[#004E89] transition-colors hover:text-[#1A659E]">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
@@ -501,6 +502,7 @@ export default function CombinedPage() {
             )}
           </div>
           <div className="flex items-center gap-3">
+            <TypeSwitcher current="combined" />
             {/* Chaos/Calm Toggle */}
             <div className="flex items-center rounded-full border-2 border-[#004E89]/30 bg-white/80 p-1 shadow-sm">
               <button

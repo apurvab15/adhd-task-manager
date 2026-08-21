@@ -10,6 +10,7 @@ import FocusModeModal from "@/components/FocusModeModal";
 import AddTasksModal from "@/components/AddTasksModal";
 import BreakTasksModal from "@/components/BreakTasksModal";
 import { hyperactivePalette, type ColorPalette } from "@/components/TaskListDrawer";
+import TypeSwitcher from "@/components/TypeSwitcher";
 import JSConfetti from "js-confetti";
 
 const STORAGE_KEY = "adhd-task-lists-hyperactive";
@@ -462,7 +463,7 @@ export default function HyperactivePage() {
       {/* Navigation Bar */}
       <nav className="flex-shrink-0 border-b border-[#1A659E]/20 bg-white/95 backdrop-blur-sm shadow-sm">
         <div className="flex items-center gap-4 px-4 py-3">
-          <Link href="/hyperactive" className="flex items-center gap-2 text-[#004E89] transition-colors hover:text-[#1A659E]">
+          <Link href="/" title="Home" className="flex items-center gap-2 text-[#004E89] transition-colors hover:text-[#1A659E]">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
@@ -494,6 +495,7 @@ export default function HyperactivePage() {
             )}
           </div>
           <div className="flex items-center gap-3">
+            <TypeSwitcher current="hyperactive" />
             <Link
               href="/tasks?mode=hyperactive"
               className="flex items-center justify-center rounded-lg p-2 bg-white border-2 border-[#004E89] text-[#004E89] transition-colors hover:bg-[#FFD1BF]/50"

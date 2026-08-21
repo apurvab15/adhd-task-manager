@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getApiKey, promptForApiKey } from "@/utils/apiKeyManager";
 
@@ -202,6 +203,12 @@ export default function ResultsPage() {
           >
             Try Again
           </button>
+          <Link
+            href="/"
+            className="inline-block text-sm font-medium text-indigo-600 hover:text-indigo-800"
+          >
+            Back to Home
+          </Link>
         </div>
       </div>
     );
@@ -240,6 +247,14 @@ export default function ResultsPage() {
   return (
     <div className={`min-h-screen bg-gradient-to-br ${currentBg} flex items-center justify-center px-4 py-12`}>
       <div className="max-w-2xl w-full space-y-8">
+        <div className="text-center">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 text-sm font-medium text-indigo-600 transition-colors hover:text-indigo-800"
+          >
+            <span aria-hidden>←</span> Home
+          </Link>
+        </div>
         {/* Success Animation */}
         <div className="text-center animate-fade-in">
           <div className="w-24 h-24 mx-auto mb-6">

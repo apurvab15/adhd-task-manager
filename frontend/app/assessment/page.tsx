@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 type FormData = {
@@ -142,6 +143,12 @@ export default function AssessmentPage() {
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-indigo-100 py-12 px-4">
       <div className="max-w-3xl mx-auto">
         <div className="mb-8 text-center">
+          <Link
+            href="/"
+            className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-indigo-600 transition-colors hover:text-indigo-800"
+          >
+            <span aria-hidden>←</span> Home
+          </Link>
           <h1 className="text-4xl font-bold text-indigo-900 mb-2">ADHD Assessment</h1>
           <p className="text-indigo-700">Please answer the following questions to help us understand your profile</p>
         </div>
