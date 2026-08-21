@@ -4,6 +4,8 @@ A task manager with **three UI personalities**, each tuned to a different ADHD p
 
 Take a short quiz to get a type, or skip the quiz and hop between the three experiences.
 
+App link : ![ADHD-App](https://adhd-task-manager-seven.vercel.app/)
+
 ## How to try it
 
 1. **Find what ADHD type you are** : a short assessment classifies you as inattentive, hyperactive-impulsive, or combined, then opens the matching UI.
