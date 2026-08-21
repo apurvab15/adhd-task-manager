@@ -11,13 +11,13 @@ Take a short quiz to get a type, or skip the quiz and hop between the three expe
 
 ## Screenshots
 
-### Inattentive — Calm Organizer
+### Inattentive
 ![Inattentive type UI](docs/screenshots/inattentive.png)
 
-### Hyperactive — Energetic Hustler
+### Hyperactive
 ![Hyperactive type UI](docs/screenshots/hyperactive.png)
 
-### Combined — Dynamic Worker
+### Combined
 ![Combined type UI](docs/screenshots/combined.png)
 
 ### Focus mode
